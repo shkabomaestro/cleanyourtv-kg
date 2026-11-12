@@ -56,9 +56,14 @@ SHOTS = [
     ("centar", "029", "day", 0.40, "Стари центар града"),
     ("fontana", "030", "day", 0.55, "Фонтана у центру града"),
     ("ulica", "031", "day", 0.50, "Центар града у јесен"),
+    ("krst", "032", "day", 0.36, "Ђурђевдански крст"),
+    # The owner's own pictures: the source is work/kg-own/<file>, the name starts with "moja-" and make_share.py leaves
+    # them out of what is shared. They may be smaller than 1920x1080 and are then enlarged.
+    ("moja-kragujevac-iz-vazduha", "own:kragujevac-iz-vazduha.jpg", "plain", 0.62, "Крагујевац из ваздуха"),
 ]
 # The time of day each look is shown at. "day" has no tint of its own and serves both halves of the day.
-MOODS = {"morning": ["morning"], "evening": ["evening"], "night": ["night"], "dusk": ["night"], "day": ["morning", "evening"]}
+MOODS = {"morning": ["morning"], "evening": ["evening"], "night": ["night"], "dusk": ["night"], "day": ["morning", "evening"],
+         "plain": ["morning", "evening"]}
 
 
 def crop_16_9(im, anchor):
@@ -137,6 +142,8 @@ def grade(im, look):
         im = channels(curve(im, 1.03), 1.075, 1.0, 0.86)
         im = clarity(im, 22)
         return shade(vignette(im, 0.22), 0.32, 0.55)
+    if look == "plain":        # a picture that is already finished: its own colours, only the shading for the text
+        return shade(im, 0.30, 0.52)
     if look == "day":          # as taken, only livelier: shown in the morning and in the afternoon
         im = vivid(im, 1.30, 1.08)
         im = clarity(im, 22)
@@ -174,9 +181,14 @@ def main():
     moods = {"morning": [], "evening": [], "night": []}
     captions, credits, done = [], [], []
     for name, num, look, anchor, caption in SHOTS:
-        im = Image.open(SRC / f"{num}.jpg").convert("RGB")
+        own = num.startswith("own:")
+        source = ROOT / "work" / "kg-own" / num[4:] if own else SRC / f"{num}.jpg"
+        if own and not source.exists():   # someone else's copy of this repo: the owner's pictures are not in it
+            print(f"{name}: skipped, {source.name} is not here")
+            continue
+        im = Image.open(source).convert("RGB")
         im = crop_16_9(im, anchor)
-        if im.width < SIZE[0] or im.height < SIZE[1]:   # never enlarge: the owner wants real 1080p
+        if not own and (im.width < SIZE[0] or im.height < SIZE[1]):   # never enlarge a Commons photo: the owner wants real 1080p
             raise SystemExit(f"{name}: source {num} gives only {im.width}x{im.height} after the 16:9 crop")
         im = im.resize(SIZE, Image.LANCZOS)
         im = grade(im, look).filter(ImageFilter.UnsharpMask(radius=0.8, percent=40, threshold=2))
@@ -184,6 +196,11 @@ def main():
         for mood in MOODS[look]:
             moods[mood].append(f"{name}.jpg")
         captions.append(f"{name}.jpg\t{caption}")
+        if own:
+            credits.append(f"| {name}.jpg | the owner's own picture | | not for sharing | colour graded |")
+            done.append((name, im))
+            print(f"{name}.jpg  {size // 1024} KB  q{quality}  ({look}, own)")
+            continue
         _, title, artist, licence, url = index[num][:5]
         note = "day photo graded to night" if look == "dusk" else "colour graded"
         credits.append(f"| {name}.jpg | [{title[5:]}]({url}) | {artist} | {licence} | {note} |")

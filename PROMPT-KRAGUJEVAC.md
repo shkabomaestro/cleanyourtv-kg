@@ -4,7 +4,7 @@ Ova grana (`kragujevac`) dodaje preko projekta [cleanyourtv](https://github.com/
 
 - početni ekran na srpskom, ćirilicom, sa pozdravom po imenu i pet aplikacija u doku; ostale su pod „Све апликације“
   kad se pritisne dole
-- 30 fotografija Kragujevca (1920×1080) koje se smenjuju po dobu dana na 10 minuta, i iste iza sata na screensaveru
+- 31 fotografiju Kragujevca (1920×1080) koje se smenjuju po dobu dana na 10 minuta, i iste iza sata na screensaveru
 - temperaturu ispod sata sa ikonicom (vedro, oblačno, padavine), iz merenja RHMZ-a na stanici Kragujevac
 - kvalitet vazduha pored temperature (IQAir; treba ti sopstveni besplatan ključ, vidi `work/README.md`)
 - red „Слушате: …“ gore desno: svoja muzika iz foldera, radio stanice ili isključeno, menja se levo/desno

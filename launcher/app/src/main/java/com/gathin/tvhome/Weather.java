@@ -41,12 +41,15 @@ final class Weather {
         return d.contains("vedro") || d.contains("sunčano") || d.contains("suncano") ? CLEAR : CLOUDY;
     }
 
-    /** The colour the US air quality index gives its six bands: good, moderate, and four shades of unhealthy. */
-    static int airColour(int index) {
-        return index <= 50 ? 0xFF4CAF50 : index <= 100 ? 0xFFFDD835 : index <= 150 ? 0xFFFB8C00
-                : index <= 200 ? 0xFFE53935 : index <= 300 ? 0xFF8E24AA : 0xFF7E0023;
+    /** Which of the US air quality index's six bands: 0 good, 1 moderate, 2 unhealthy for sensitive groups, 3 unhealthy, 4 very unhealthy, 5 hazardous. */
+    static int airBand(int index) {
+        return index <= 50 ? 0 : index <= 100 ? 1 : index <= 150 ? 2 : index <= 200 ? 3 : index <= 300 ? 4 : 5;
     }
 
+    /** The colour the index gives that band. */
+    static int airColour(int index) {
+        return new int[]{0xFF4CAF50, 0xFFFDD835, 0xFFFB8C00, 0xFFE53935, 0xFF8E24AA, 0xFF7E0023}[airBand(index)];
+    }
     /** air's start drawable is the dot, a GradientDrawable. */
     static void refresh(Activity activity, TextView line, Icon icon, TextView air) {
         show(line, icon, air);
@@ -84,6 +87,7 @@ final class Weather {
         icon.invalidateSelf();
         air.setVisibility(aqi < 0 ? View.GONE : View.VISIBLE);
         if (aqi >= 0) {
+            // "AQI" says what the number is (an index from 0 to 500, it has no unit); the dot's colour says how bad.
             air.setText(air.getContext().getString(R.string.air_quality, aqi));
             ((GradientDrawable) air.getCompoundDrawablesRelative()[0]).setColor(airColour(aqi));
         }

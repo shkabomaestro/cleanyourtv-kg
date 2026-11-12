@@ -30,5 +30,7 @@ public class WeatherKindTest {
         assertEquals(0xFFE53935, Weather.airColour(151));
         assertEquals(0xFF8E24AA, Weather.airColour(300));
         assertEquals(0xFF7E0023, Weather.airColour(301));
+        assertEquals(2, Weather.airBand(103));   // "unhealthy for sensitive groups"
+        assertEquals(5, Weather.airBand(999));
     }
 }

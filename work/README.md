@@ -74,11 +74,14 @@ U `themes\kragujevac\config.json`:
   dugmad). Ako početni ekran postane trom, stavi `advanced_effects` na `false`.
 - `clock_wallpaper` — screensaver je sat preko iste fotografije.
 
-Fotografije (30 komada, 1920×1080) pravi `work\kg_grade.py` iz originala u `work\kg-hd\`: iseca na 16:9, pojačava boje po dobu
+Fotografije (32 komada, 1920×1080) pravi `work\kg_grade.py` iz originala u `work\kg-hd\`: iseca na 16:9, pojačava boje po dobu
 dana i zatamnjuje vrh i dno da se sat i dok čitaju. Spisak kadrova je lista `SHOTS` na vrhu skripte (broj originala je iz
 `work\kg-hd\index.tsv`). Noćne: V3, Saborna crkva i teatar su prave noćne fotografije,
 gimnazija i fića su dnevne obrađene u noć („dusk“). Izgled „day“ ide i ujutru i popodne. Skripta odbija izvor koji posle
 isecanja nema bar 1920×1080, a gornji levi ugao blago zatamnjuje da se sat i datum čitaju.
+Tvoje sopstvene fotografije idu u `work\kg-own\`, a u listi `SHOTS` imaju ime koje počinje sa `moja-` i izvor `own:ime-fajla.jpg`
+(izgled `plain` ih ostavlja u njihovim bojama). Smeju da budu i manje od 1920×1080, tada se uvećavaju i nešto su mekše.
+One ostaju samo kod tebe: `work\make_share.py` ih izostavlja iz zipa i forka.
 Stick menije crta u 1280×720 (HDMI izlaz je 1080p), pa launcher sliku smanji na tu veličinu; veći fajl ne daje više piksela na
 ekranu. Sve su sa Wikimedia Commons pod CC BY-SA; autori su u `themes\kragujevac\CREDITS.md`, pregled je `work\kragujevac-opcije.jpg`.
 
@@ -160,8 +163,10 @@ Ako nema merenja mlađeg od 3 sata ili nema dodatka, red se ne prikazuje. Za dru
 
 ### Kvalitet vazduha (IQAir)
 
-Pored temperature stoji „Ваздух 57“ sa tačkom u boji indeksa (zelena do 50, žuta do 100, narandžasta do 150, crvena do 200,
-ljubičasta do 300, tamnocrvena preko toga). To je američki AQI koji IQAir daje za Kragujevac, osvežava se jednom na sat.
+Pored temperature stoji npr. „Ваздух 103 AQI“ sa tačkom u boji. AQI je američki indeks kvaliteta vazduha: broj od 0 do 500
+bez merne jedinice, veći je gori. Boja tačke kaže opseg: do 50 dobar (zelena), do 100 umeren (žuta), do 150 nezdrav za
+osetljive (narandžasta), do 200 nezdrav (crvena), do 300 vrlo nezdrav (ljubičasta), preko toga opasan (tamnocrvena).
+Vrednost daje IQAir za Kragujevac, osvežava se jednom na sat.
 IQAir traži lični ključ, pa se red ne prikazuje dok ga nema:
 
 1. Na `https://dashboard.iqair.com/personal/api-keys` napravi nalog i besplatan ključ („Community“ plan).

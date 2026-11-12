@@ -5,6 +5,7 @@
 Copies what was changed or added over the upstream repo, without what is personal: the greeting name, the TV's
 address, the music, backups and screenshots. Stops if one of those strings is still found in the bundle.
 """
+import json
 import re
 import shutil
 import subprocess
@@ -35,8 +36,10 @@ def main():
     prompt = (BUNDLE / "PROMPT-SETUP.md").read_text(encoding="utf-8")
     shutil.rmtree(OVERLAY, ignore_errors=True)
     files = [f for f in git("ls-files", "-m") if f != ".gitignore"]
+    # Not the music, and not the owner's own pictures ("moja-..."): nobody gave leave to pass those on.
     files += [f for f in git("ls-files", "-o", "--exclude-standard")
-              if re.match(r"(launcher/|addons/radio/|themes/kragujevac/)", f) and not f.startswith("themes/kragujevac/music/")]
+              if re.match(r"(launcher/|addons/radio/|themes/kragujevac/)", f) and not f.startswith("themes/kragujevac/music/")
+              and "/moja-" not in f]
     files += ["work/" + name for name in WORK]
     for name in files:
         src, dst = ROOT / name, OVERLAY / name
@@ -45,6 +48,15 @@ def main():
             dst.write_text(scrub(src.read_text(encoding="utf-8")), encoding="utf-8", newline="")
         else:
             shutil.copyfile(src, dst)
+    theme = OVERLAY / "themes" / "kragujevac"
+    for listing in (theme / "wallpapers" / "captions.txt", theme / "CREDITS.md"):
+        kept = [line for line in listing.read_text(encoding="utf-8").splitlines() if "moja-" not in line]
+        listing.write_text("\n".join(kept) + "\n", encoding="utf-8", newline="")
+    config = json.loads((theme / "config.json").read_text(encoding="utf-8"))
+    config["wallpaper_moods"] = {mood: [name for name in names if not name.startswith("moja-")]
+                                 for mood, names in config["wallpaper_moods"].items()}
+    (theme / "config.json").write_text(json.dumps(config, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="")
+    assert not list(OVERLAY.rglob("moja-*")) and "moja-" not in (theme / "config.json").read_text(encoding="utf-8")
     music = OVERLAY / "themes" / "kragujevac" / "music"
     music.mkdir(parents=True)
     (music / "README.txt").write_text("Ovde stavi svoje audio fajlove (MP3, M4A, OGG, FLAC, WAV). Sviraju po abecednom redu imena, ukrug.\n"

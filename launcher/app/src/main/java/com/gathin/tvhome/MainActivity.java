@@ -1100,7 +1100,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         super.onResume();
         resumed = true;
         HomeMusic.start(this);
-        if (weatherLine != null) Weather.refresh(this, weatherLine, weatherIcon);
+        if (weatherLine != null) {
+            root.removeCallbacks(weatherTick);
+            weatherTick.run();
+        }
         // A festival that started or ended while Home was in the background: rebuild with or without it.
         if (festive != festival.active(LocalDate.now())) {
             recreate();
@@ -1318,6 +1321,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         super.onPause();
         resumed = false;
         HomeMusic.stop();
+        root.removeCallbacks(weatherTick);
         // No UP reaches a paused Home, so a vendor-key hold it saw go down would still open its app later.
         // Only Home's own share is dropped: a key service that saw the same DOWN keeps its hold.
         RemoteKeys.release(this);
@@ -3635,6 +3639,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     private TextView weatherLine;
     private Weather.Icon weatherIcon;
+    private TextView airLine;
+    /** While Home stays up: ask again every twenty minutes (Weather.refresh skips a question asked too soon). */
+    private final Runnable weatherTick = new Runnable() {
+        @Override public void run() {
+            Weather.refresh(MainActivity.this, weatherLine, weatherIcon, airLine);
+            root.postDelayed(this, 20 * 60_000);
+        }
+    };
 
     /** Added to the header in code, under the clock's block and in line with it; hidden until there is a reading. */
     private void addWeatherLine() {
@@ -3655,7 +3667,25 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         lp.addRule(android.widget.RelativeLayout.BELOW, R.id.leftBlock);
         lp.addRule(android.widget.RelativeLayout.ALIGN_START, R.id.leftBlock);
         lp.topMargin = (int) (6 * density);
-        ((android.widget.RelativeLayout) stats.getParent()).addView(weatherLine, lp);
+        // The air quality index beside it: a dot in the index's colour, then the number.
+        android.graphics.drawable.GradientDrawable dot = new android.graphics.drawable.GradientDrawable();
+        dot.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+        dot.setStroke((int) density, 0x66000000);
+        dot.setBounds(0, 0, (int) (11 * density), (int) (11 * density));
+        airLine = new TextView(this);
+        airLine.setTextSize(15);
+        airLine.setTextColor(0xE6FFFFFF);
+        airLine.setShadowLayer(6 * density, 0, density, 0xCC000000);
+        airLine.setGravity(Gravity.CENTER_VERTICAL);
+        airLine.setCompoundDrawablesRelative(dot, null, null, null);
+        airLine.setCompoundDrawablePadding((int) (6 * density));
+        airLine.setPadding((int) (18 * density), 0, 0, 0);
+        airLine.setVisibility(View.GONE);
+        LinearLayout row = new LinearLayout(this);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.addView(weatherLine);
+        row.addView(airLine);
+        ((android.widget.RelativeLayout) stats.getParent()).addView(row, lp);
         // The same soft shadow under the greeting, the clock and the date: a photo is often pale where they sit.
         for (int id : new int[]{R.id.greeting, R.id.clock, R.id.date}) {
             ((TextView) findViewById(id)).setShadowLayer(6 * density, 0, density, 0xCC000000);

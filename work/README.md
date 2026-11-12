@@ -153,9 +153,26 @@ Jačina ide dugmetom za zvuk na daljinskom, kao za sve ostalo.
 Ispod sata piše trenutna temperatura u Kragujevcu sa ikonicom: sunce (vedro), oblak (oblačno, magla) ili oblak sa kapima
 (kiša, sneg, pljusak). Izvor su zvanična merenja RHMZ-a na stanici Kragujevac (broj 13278), koja se osvežavaju na sat:
 `https://www.hidmet.gov.rs/latin/osmotreni/index.rss`. To je izmerena vrednost, ne prognoza. Podatak preuzima radio dodatak
-(`WeatherProvider.java`; launcher nema internet), najviše jednom u 20 minuta, a launcher ga pita kad se otvori početni ekran.
+(`WeatherProvider.java`; launcher nema internet), najviše jednom u 20 minuta, a launcher ga pita kad se otvori početni ekran
+i zatim na svakih 20 minuta dok je otvoren.
 Ako nema merenja mlađeg od 3 sata ili nema dodatka, red se ne prikazuje. Za drugi grad promeni `STATION` u tom fajlu na
 „ID stanice“ iz istog izvora. Ikonicu bira `Weather.kind` po opisu vremena iz izvora.
+
+### Kvalitet vazduha (IQAir)
+
+Pored temperature stoji „Ваздух 57“ sa tačkom u boji indeksa (zelena do 50, žuta do 100, narandžasta do 150, crvena do 200,
+ljubičasta do 300, tamnocrvena preko toga). To je američki AQI koji IQAir daje za Kragujevac, osvežava se jednom na sat.
+IQAir traži lični ključ, pa se red ne prikazuje dok ga nema:
+
+1. Na `https://dashboard.iqair.com/personal/api-keys` napravi nalog i besplatan ključ („Community“ plan).
+2. Upiši ključ u jedan red u fajl `work\iqair-key.txt` (folder `work` se ne deli i ne ide u fork).
+3. Pošalji ga na TV:
+```powershell
+$adb="$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"; $k='/sdcard/Android/data/local.cleanyourtv.radio/files'
+& $adb connect <tv ip>:5555; & $adb shell "mkdir -p $k"; & $adb push work\iqair-key.txt "$k/iqair-key.txt"
+```
+Vrednost se pojavi kad se sledeći put otvori početni ekran (najkasnije za 20 minuta). Drugi grad: adresa `AIR` u
+`WeatherProvider.java`, sa imenima kako ih IQAir piše na svojoj stranici grada.
 
 ### Zvuci navigacije
 

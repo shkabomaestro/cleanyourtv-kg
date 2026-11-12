@@ -20,4 +20,15 @@ public class WeatherKindTest {
         assertEquals(Weather.WET, Weather.kind("Susnežica"));
         assertEquals(Weather.WET, Weather.kind("Rosulja"));
     }
+
+    @Test
+    public void coloursTheAirIndexByItsBand() {
+        assertEquals(0xFF4CAF50, Weather.airColour(0));
+        assertEquals(0xFF4CAF50, Weather.airColour(50));
+        assertEquals(0xFFFDD835, Weather.airColour(51));
+        assertEquals(0xFFFB8C00, Weather.airColour(150));
+        assertEquals(0xFFE53935, Weather.airColour(151));
+        assertEquals(0xFF8E24AA, Weather.airColour(300));
+        assertEquals(0xFF7E0023, Weather.airColour(301));
+    }
 }

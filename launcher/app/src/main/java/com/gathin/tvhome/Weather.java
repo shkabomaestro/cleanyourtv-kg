@@ -8,6 +8,7 @@ import android.graphics.Paint;
 import android.graphics.PixelFormat;
 import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
+import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.view.View;
 import android.widget.TextView;
@@ -15,19 +16,21 @@ import android.widget.TextView;
 import java.util.Locale;
 
 /**
- * Local addition: the temperature under the clock, with an icon for clear, cloudy or precipitation. The launcher
- * stays offline: the radio add-on reads the weather service (addons/radio, WeatherProvider) and this only asks it,
- * when Home comes up and the last answer is older than ten minutes. No add-on or no reading: the line is hidden.
+ * Local addition: the temperature and the air quality under the clock. The temperature has an icon for clear,
+ * cloudy or precipitation, the air a dot in the colour of its index. The launcher stays offline: the radio
+ * add-on reads both services (addons/radio, WeatherProvider) and this only asks it, when Home comes up and every
+ * twenty minutes while it stays up. No add-on or no reading: that part of the line is hidden.
  */
 final class Weather {
     private Weather() { }
 
     static final int CLEAR = 0, CLOUDY = 1, WET = 2;
-    private static final String NOW = "content://local.cleanyourtv.radio.weather/now";
+    private static final String PROVIDER = "content://local.cleanyourtv.radio.weather/";
     private static final long ASK_EVERY_MS = 10 * 60_000;
     private static long asked;
-    /** The last answer, kept across a rebuilt Home: "18°C" (null: nothing to show) and the service's words for it. */
+    /** The last answers, kept across a rebuilt Home: "18°C" (null: nothing to show), the service's words for it, the index (-1: none). */
     private static String shown, said = "";
+    private static int aqi = -1;
 
     /** The service's own words for the weather (Serbian, Latin script: "Slaba kiša", "Pretežno vedro") as one of three. */
     static int kind(String description) {
@@ -38,14 +41,22 @@ final class Weather {
         return d.contains("vedro") || d.contains("sunčano") || d.contains("suncano") ? CLEAR : CLOUDY;
     }
 
-    static void refresh(Activity activity, TextView line, Icon icon) {
-        show(line, icon);
+    /** The colour the US air quality index gives its six bands: good, moderate, and four shades of unhealthy. */
+    static int airColour(int index) {
+        return index <= 50 ? 0xFF4CAF50 : index <= 100 ? 0xFFFDD835 : index <= 150 ? 0xFFFB8C00
+                : index <= 200 ? 0xFFE53935 : index <= 300 ? 0xFF8E24AA : 0xFF7E0023;
+    }
+
+    /** air's start drawable is the dot, a GradientDrawable. */
+    static void refresh(Activity activity, TextView line, Icon icon, TextView air) {
+        show(line, icon, air);
         long now = System.currentTimeMillis();
         if (now - asked < ASK_EVERY_MS) return;
         asked = now;
         new Thread(() -> {
             String temperature = null, description = "";
-            try (Cursor row = activity.getContentResolver().query(Uri.parse(NOW), null, null, null, null)) {
+            int index = -1;
+            try (Cursor row = activity.getContentResolver().query(Uri.parse(PROVIDER + "now"), null, null, null, null)) {
                 if (row != null && row.moveToFirst()) {
                     temperature = Math.round(Float.parseFloat(row.getString(0))) + "°C";
                     description = row.getString(1);
@@ -53,20 +64,30 @@ final class Weather {
             } catch (RuntimeException e) {
                 temperature = null;   // the add-on is missing, signed with another key, or sent something that is not a number
             }
+            try (Cursor row = activity.getContentResolver().query(Uri.parse(PROVIDER + "air"), null, null, null, null)) {
+                if (row != null && row.moveToFirst()) index = row.getInt(0);
+            } catch (RuntimeException e) {
+                // as above
+            }
             shown = temperature;
             said = description == null ? "" : description;
-            activity.runOnUiThread(() -> show(line, icon));
+            aqi = index;
+            activity.runOnUiThread(() -> show(line, icon, air));
         }, "weather").start();
     }
 
-    private static void show(TextView line, Icon icon) {
+    private static void show(TextView line, Icon icon, TextView air) {
         line.setVisibility(shown == null ? View.GONE : View.VISIBLE);
         line.setText(shown);
         line.setContentDescription(shown == null ? null : shown + ", " + said);
         icon.kind = kind(said);
         icon.invalidateSelf();
+        air.setVisibility(aqi < 0 ? View.GONE : View.VISIBLE);
+        if (aqi >= 0) {
+            air.setText(air.getContext().getString(R.string.air_quality, aqi));
+            ((GradientDrawable) air.getCompoundDrawablesRelative()[0]).setColor(airColour(aqi));
+        }
     }
-
     /** A sun, a cloud, or a cloud with drops, in white; coordinates are dp on a 26x22 box. */
     static final class Icon extends Drawable {
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);

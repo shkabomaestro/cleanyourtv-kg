@@ -21,7 +21,7 @@
   "background_color": "#000000",
   "wallpaper": true,
   "wallpaper_rotation_minutes": 10,
-  "wallpaper_order": "sequential",
+  "wallpaper_order": "shuffle",
   "wallpaper_captions": true,
   "wallpaper_moods": {
     "morning": [

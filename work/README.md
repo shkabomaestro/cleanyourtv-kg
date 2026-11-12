@@ -68,15 +68,17 @@ U `themes\kragujevac\config.json`:
   otvaraju iz dugmeta „Све апликације“ ispod doka (strelica dole). Obriši red da se aplikacija vrati na početni ekran.
 - `wallpaper_moods` — koje fotografije idu ujutru (`morning`: od izlaska sunca do podneva), popodne (`evening`: do pola sata
   posle zalaska) i noću (`night`). Izbaci ime fajla iz liste da se ta fotografija ne prikazuje; ostavi samo jednu da stoji stalno.
-- `wallpaper_rotation_minutes` — na koliko minuta se menja fotografija unutar istog doba dana (20).
+- `wallpaper_rotation_minutes` — na koliko minuta se menja fotografija unutar istog doba dana (10).
 - `wallpaper_captions` — natpis mesta ispod dugmadi gore desno; tekstovi su u `wallpapers\captions.txt`.
 - `advanced_effects`, `dock_even_padding`, `icon_only_buttons` — Apple TV detalji (podignuta pločica, ravnomeran dok, okrugla
   dugmad). Ako početni ekran postane trom, stavi `advanced_effects` na `false`.
 - `clock_wallpaper` — screensaver je sat preko iste fotografije.
 
-Fotografije (16 komada, 1920×1080) pravi `work\kg_grade.py` iz originala u `work\kg-hd\`: iseca na 16:9, pojačava boje po dobu
+Fotografije (30 komada, 1920×1080) pravi `work\kg_grade.py` iz originala u `work\kg-hd\`: iseca na 16:9, pojačava boje po dobu
 dana i zatamnjuje vrh i dno da se sat i dok čitaju. Spisak kadrova je lista `SHOTS` na vrhu skripte (broj originala je iz
-`work\kg-hd\index.tsv`). Noćne: V3 su prave noćne fotografije, gimnazija i fića su dnevne obrađene u noć („dusk“).
+`work\kg-hd\index.tsv`). Noćne: V3, Saborna crkva i teatar su prave noćne fotografije,
+gimnazija i fića su dnevne obrađene u noć („dusk“). Izgled „day“ ide i ujutru i popodne. Skripta odbija izvor koji posle
+isecanja nema bar 1920×1080, a gornji levi ugao blago zatamnjuje da se sat i datum čitaju.
 Stick menije crta u 1280×720 (HDMI izlaz je 1080p), pa launcher sliku smanji na tu veličinu; veći fajl ne daje više piksela na
 ekranu. Sve su sa Wikimedia Commons pod CC BY-SA; autori su u `themes\kragujevac\CREDITS.md`, pregled je `work\kragujevac-opcije.jpg`.
 
@@ -145,6 +147,15 @@ $adb="$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"; $m='/sdcard/Android
 ```
 Nova lista važi od sledeće pesme, bez restarta. Redosled menjaš brojem na početku imena (`01 ...mp3`, `02 ...mp3`).
 Jačina ide dugmetom za zvuk na daljinskom, kao za sve ostalo.
+
+### Temperatura ispod sata
+
+Ispod sata piše trenutna temperatura u Kragujevcu sa ikonicom: sunce (vedro), oblak (oblačno, magla) ili oblak sa kapima
+(kiša, sneg, pljusak). Izvor su zvanična merenja RHMZ-a na stanici Kragujevac (broj 13278), koja se osvežavaju na sat:
+`https://www.hidmet.gov.rs/latin/osmotreni/index.rss`. To je izmerena vrednost, ne prognoza. Podatak preuzima radio dodatak
+(`WeatherProvider.java`; launcher nema internet), najviše jednom u 20 minuta, a launcher ga pita kad se otvori početni ekran.
+Ako nema merenja mlađeg od 3 sata ili nema dodatka, red se ne prikazuje. Za drugi grad promeni `STATION` u tom fajlu na
+„ID stanice“ iz istog izvora. Ikonicu bira `Weather.kind` po opisu vremena iz izvora.
 
 ### Zvuci navigacije
 

@@ -929,6 +929,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         btnLibraryTop.setOnKeyListener(pillKeys);
         for (View button : topAppButtons) button.setOnKeyListener(pillKeys);
         addSoundButton(btnSettings);
+        addWeatherLine();
         if (advancedEffects) {
             List<View> pills = new ArrayList<>(Arrays.asList(btnInputs, btnWifi, btnVpn, btnReorder, btnLibraryTop, btnSettings));
             pills.addAll(topAppButtons);
@@ -1099,6 +1100,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         super.onResume();
         resumed = true;
         HomeMusic.start(this);
+        if (weatherLine != null) Weather.refresh(this, weatherLine, weatherIcon);
         // A festival that started or ended while Home was in the background: rebuild with or without it.
         if (festive != festival.active(LocalDate.now())) {
             recreate();
@@ -3627,6 +3629,37 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private static void fold(View view, List<View> folded) {
         view.setVisibility(View.GONE);
         folded.add(view);
+    }
+
+    // ---- local addition: the temperature under the clock (Weather) ---------------------------------
+
+    private TextView weatherLine;
+    private Weather.Icon weatherIcon;
+
+    /** Added to the header in code, under the clock's block and in line with it; hidden until there is a reading. */
+    private void addWeatherLine() {
+        View stats = findViewById(R.id.stats);
+        if (!(stats.getParent() instanceof android.widget.RelativeLayout)) return;
+        weatherIcon = new Weather.Icon(density);
+        weatherIcon.setBounds(0, 0, weatherIcon.getIntrinsicWidth(), weatherIcon.getIntrinsicHeight());
+        weatherLine = new TextView(this);
+        weatherLine.setTextSize(19);
+        weatherLine.setTextColor(0xFFFFFFFF);
+        weatherLine.setShadowLayer(6 * density, 0, density, 0xCC000000);
+        weatherLine.setGravity(Gravity.CENTER_VERTICAL);
+        weatherLine.setCompoundDrawables(weatherIcon, null, null, null);
+        weatherLine.setCompoundDrawablePadding((int) (8 * density));
+        weatherLine.setVisibility(View.GONE);
+        android.widget.RelativeLayout.LayoutParams lp = new android.widget.RelativeLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.addRule(android.widget.RelativeLayout.BELOW, R.id.leftBlock);
+        lp.addRule(android.widget.RelativeLayout.ALIGN_START, R.id.leftBlock);
+        lp.topMargin = (int) (6 * density);
+        ((android.widget.RelativeLayout) stats.getParent()).addView(weatherLine, lp);
+        // The same soft shadow under the greeting, the clock and the date: a photo is often pale where they sit.
+        for (int id : new int[]{R.id.greeting, R.id.clock, R.id.date}) {
+            ((TextView) findViewById(id)).setShadowLayer(6 * density, 0, density, 0xCC000000);
+        }
     }
 
     // ---- local addition: the sound line under the wallpaper's name (HomeMusic) --------------------

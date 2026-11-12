@@ -20,7 +20,7 @@
   "header_white": true,
   "background_color": "#000000",
   "wallpaper": true,
-  "wallpaper_rotation_minutes": 20,
+  "wallpaper_rotation_minutes": 10,
   "wallpaper_order": "sequential",
   "wallpaper_captions": true,
   "wallpaper_moods": {
@@ -30,7 +30,18 @@
       "sumarice-jutro.jpg",
       "sud-jutro.jpg",
       "zastava-jutro.jpg",
-      "fica-jutro.jpg"
+      "fica-jutro.jpg",
+      "stara-crkva.jpg",
+      "teatar.jpg",
+      "konak.jpg",
+      "park.jpg",
+      "jezero.jpg",
+      "smak.jpg",
+      "trg.jpg",
+      "skupstina.jpg",
+      "centar.jpg",
+      "fontana.jpg",
+      "ulica.jpg"
     ],
     "evening": [
       "gimnazija-dan.jpg",
@@ -38,13 +49,27 @@
       "sumarice-dan.jpg",
       "sud-dan.jpg",
       "zastava-dan.jpg",
-      "fica-dan.jpg"
+      "fica-dan.jpg",
+      "stara-crkva.jpg",
+      "teatar.jpg",
+      "konak.jpg",
+      "park.jpg",
+      "jezero.jpg",
+      "smak.jpg",
+      "trg.jpg",
+      "zalazak.jpg",
+      "skupstina.jpg",
+      "centar.jpg",
+      "fontana.jpg",
+      "ulica.jpg"
     ],
     "night": [
       "gimnazija-noc.jpg",
       "v3-noc.jpg",
       "sumarice-noc.jpg",
-      "fica-noc.jpg"
+      "fica-noc.jpg",
+      "saborna-noc.jpg",
+      "teatar-noc.jpg"
     ]
   },
   "wallpaper_dim": 0,

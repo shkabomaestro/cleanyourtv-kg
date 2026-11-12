@@ -14,3 +14,17 @@ zastava-dan.jpg	Застава · управна зграда
 fica-jutro.jpg	Застава 750 „Фића“
 fica-dan.jpg	Застава 750 „Фића“
 fica-noc.jpg	Застава 750 „Фића“
+stara-crkva.jpg	Стара црква
+saborna-noc.jpg	Саборна црква
+teatar.jpg	Књажевско-српски театар
+teatar-noc.jpg	Књажевско-српски театар
+konak.jpg	Амиџин конак
+park.jpg	Велики парк
+jezero.jpg	Језеро Бубањ
+smak.jpg	Споменик групи „Смак“
+trg.jpg	Трг народних хероја
+zalazak.jpg	Залазак сунца над Крагујевцем
+skupstina.jpg	Скупштина града
+centar.jpg	Стари центар града
+fontana.jpg	Фонтана у центру града
+ulica.jpg	Центар града у јесен

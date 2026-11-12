@@ -42,8 +42,23 @@ SHOTS = [
     ("fica-jutro", "016", "morning", 0.50, "Застава 750 „Фића“"),
     ("fica-dan", "016", "evening", 0.50, "Застава 750 „Фића“"),
     ("fica-noc", "016", "dusk", 0.50, "Застава 750 „Фића“"),
+    ("stara-crkva", "018", "day", 0.45, "Стара црква"),
+    ("saborna-noc", "019", "night", 0.45, "Саборна црква"),
+    ("teatar", "020", "day", 0.40, "Књажевско-српски театар"),
+    ("teatar-noc", "021", "night", 0.45, "Књажевско-српски театар"),
+    ("konak", "022", "day", 0.45, "Амиџин конак"),
+    ("park", "023", "day", 0.55, "Велики парк"),
+    ("jezero", "024", "day", 0.50, "Језеро Бубањ"),
+    ("smak", "025", "day", 0.50, "Споменик групи „Смак“"),
+    ("trg", "026", "day", 0.50, "Трг народних хероја"),
+    ("zalazak", "027", "evening", 0.35, "Залазак сунца над Крагујевцем"),
+    ("skupstina", "028", "day", 0.50, "Скупштина града"),
+    ("centar", "029", "day", 0.40, "Стари центар града"),
+    ("fontana", "030", "day", 0.55, "Фонтана у центру града"),
+    ("ulica", "031", "day", 0.50, "Центар града у јесен"),
 ]
-MOODS = {"morning": "morning", "evening": "evening", "night": "night", "dusk": "night"}
+# The time of day each look is shown at. "day" has no tint of its own and serves both halves of the day.
+MOODS = {"morning": ["morning"], "evening": ["evening"], "night": ["night"], "dusk": ["night"], "day": ["morning", "evening"]}
 
 
 def crop_16_9(im, anchor):
@@ -94,7 +109,14 @@ def shade(im, top, bottom, top_until=0.30, bottom_from=0.50):
         column.append(int(255 * a))
     mask = Image.new("L", (1, h))
     mask.putdata(column)
-    return Image.composite(Image.new("RGB", im.size, "black"), im, mask.resize((w, h)))
+    im = Image.composite(Image.new("RGB", im.size, "black"), im, mask.resize((w, h)))
+    # The greeting, the clock, the date and the temperature sit top left, often over a pale wall or sky: a soft
+    # dark corner there, strongest at the corner and gone by the middle of the picture.
+    cw, ch = 96, 54
+    corner = Image.new("L", (cw, ch))
+    corner.putdata([int(255 * 0.55 * max(0.0, 1 - ((x / (0.85 * cw)) ** 2 + (y / (0.45 * ch)) ** 2) ** 0.5) ** 1.1)
+                    for y in range(ch) for x in range(cw)])
+    return Image.composite(Image.new("RGB", im.size, "black"), im, corner.resize((w, h), Image.BICUBIC))
 
 
 def vignette(im, strength):
@@ -115,6 +137,10 @@ def grade(im, look):
         im = channels(curve(im, 1.03), 1.075, 1.0, 0.86)
         im = clarity(im, 22)
         return shade(vignette(im, 0.22), 0.32, 0.55)
+    if look == "day":          # as taken, only livelier: shown in the morning and in the afternoon
+        im = vivid(im, 1.30, 1.08)
+        im = clarity(im, 22)
+        return shade(im, 0.30, 0.52)
     if look == "night":        # a real night photo: keep it, only cleaner and deeper
         im = vivid(im, 1.15, 1.06)
         im = clarity(im, 10)
@@ -149,10 +175,14 @@ def main():
     captions, credits, done = [], [], []
     for name, num, look, anchor, caption in SHOTS:
         im = Image.open(SRC / f"{num}.jpg").convert("RGB")
-        im = crop_16_9(im, anchor).resize(SIZE, Image.LANCZOS)
+        im = crop_16_9(im, anchor)
+        if im.width < SIZE[0] or im.height < SIZE[1]:   # never enlarge: the owner wants real 1080p
+            raise SystemExit(f"{name}: source {num} gives only {im.width}x{im.height} after the 16:9 crop")
+        im = im.resize(SIZE, Image.LANCZOS)
         im = grade(im, look).filter(ImageFilter.UnsharpMask(radius=0.8, percent=40, threshold=2))
         quality, size = save(im, OUT / f"{name}.jpg")
-        moods[MOODS[look]].append(f"{name}.jpg")
+        for mood in MOODS[look]:
+            moods[mood].append(f"{name}.jpg")
         captions.append(f"{name}.jpg\t{caption}")
         _, title, artist, licence, url = index[num][:5]
         note = "day photo graded to night" if look == "dusk" else "colour graded"

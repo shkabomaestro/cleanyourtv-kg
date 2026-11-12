@@ -30,5 +30,12 @@
             android:permission="local.cleanyourtv.radio.PLAY"
             android:foregroundServiceType="mediaPlayback" />
 
+        <!-- The weather for the launcher's line under the clock; same signing key only. -->
+        <provider
+            android:name=".WeatherProvider"
+            android:authorities="local.cleanyourtv.radio.weather"
+            android:exported="true"
+            android:readPermission="local.cleanyourtv.radio.PLAY" />
+
     </application>
 </manifest>

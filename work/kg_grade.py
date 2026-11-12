@@ -59,7 +59,9 @@ SHOTS = [
     ("krst", "032", "day", 0.36, "Ђурђевдански крст"),
     # The owner's own pictures: the source is work/kg-own/<file>, the name starts with "moja-" and make_share.py leaves
     # them out of what is shared. They may be smaller than 1920x1080 and are then enlarged.
-    ("moja-kragujevac-iz-vazduha", "own:kragujevac-iz-vazduha.jpg", "plain", 0.62, "Крагујевац из ваздуха"),
+    ("moja-os-treci-kragujevacki-bataljon", "own:skola-teren.jpg", "plain", 0.62, "ОШ Трећи крагујевачки батаљон"),
+    ("moja-skola-odozgo", "own:skola-odozgo.jpg", "plain", 0.50, "ОШ Трећи крагујевачки батаљон"),
+    ("moja-kragujevac-iz-vazduha", "own:naselje.jpg", "plain", 0.10, "Крагујевац из ваздуха"),
 ]
 # The time of day each look is shown at. "day" has no tint of its own and serves both halves of the day.
 MOODS = {"morning": ["morning"], "evening": ["evening"], "night": ["night"], "dusk": ["night"], "day": ["morning", "evening"],
@@ -190,8 +192,12 @@ def main():
         im = crop_16_9(im, anchor)
         if not own and (im.width < SIZE[0] or im.height < SIZE[1]):   # never enlarge a Commons photo: the owner wants real 1080p
             raise SystemExit(f"{name}: source {num} gives only {im.width}x{im.height} after the 16:9 crop")
+        enlarged = im.width < SIZE[0]
+        if enlarged:   # sharpen the small detail before it is spread over more pixels, then once more at full size
+            im = im.resize((1440, 810), Image.LANCZOS).filter(ImageFilter.UnsharpMask(radius=1.0, percent=60, threshold=1))
         im = im.resize(SIZE, Image.LANCZOS)
-        im = grade(im, look).filter(ImageFilter.UnsharpMask(radius=0.8, percent=40, threshold=2))
+        im = grade(im, look).filter(ImageFilter.UnsharpMask(radius=1.6, percent=70, threshold=2) if enlarged
+                                    else ImageFilter.UnsharpMask(radius=0.8, percent=40, threshold=2))
         quality, size = save(im, OUT / f"{name}.jpg")
         for mood in MOODS[look]:
             moods[mood].append(f"{name}.jpg")

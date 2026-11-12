@@ -30,7 +30,7 @@ IP adresa TV-a: <npr. 192.168.1.50, ili "nađi je">
 Hoću da mi očistiš Android TV i postaviš početni ekran iz grane kragujevac. Radi na pravom uređaju, korak po korak,
 proveravaj screenshotovima sa TV-a i pitaj me pre svega što zavisi od mojih želja.
 
-1. Kloniraj https://github.com/shkabomaestro/cleanyourtv u ovaj folder i prebaci se na granu `kragujevac`
+1. Kloniraj https://github.com/shkabomaestro/cleanyourtv-kg u ovaj folder i prebaci se na granu `kragujevac`
    (`git clone -b kragujevac`). Na Windowsu kloniraj sa `git -c core.longpaths=true`, a folder mora imati kratku
    putanju: duge putanje lome pip i Gradle.
 2. Pročitaj `work/README.md`: tamo je opisano kako je sve složeno i kako se menja. To su beleške sa jednog TV-a

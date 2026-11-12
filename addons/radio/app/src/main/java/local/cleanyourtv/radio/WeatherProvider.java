@@ -23,7 +23,7 @@ import java.nio.file.Files;
  * fifteen minutes (a weather model's figure, not a thermometer's: the owner chose it over the weather service's
  * hourly measurement in whole degrees). ".../air" answers one row {aqi, at}: the US air quality index
  * IQAir gives for the town. Either answers no row when nothing recent is known. Read on query, the weather at
- * most every twenty minutes and the air every hour; the launcher asks from a background thread.
+ * most every fifteen minutes and the air every hour; the launcher asks from a background thread.
  */
 public class WeatherProvider extends ContentProvider {
     private static final long MINUTE = 60_000, HOUR = 60 * MINUTE;
@@ -47,7 +47,8 @@ public class WeatherProvider extends ContentProvider {
     private Cursor weather() {
         SharedPreferences saved = getContext().getSharedPreferences("weather", 0);
         long now = System.currentTimeMillis();
-        if (due(saved, now, 20 * MINUTE, 5 * MINUTE)) {
+        // Fifteen minutes, not the launcher's twenty: a reading taken a second after one ask must be old enough at the next.
+        if (due(saved, now, 15 * MINUTE, 5 * MINUTE)) {
             try {
                 JSONObject current = new JSONObject(get(FEED)).getJSONObject("current");
                 int code = current.getInt("weather_code");   // WMO: 0-1 clear, 2-48 cloud and fog, 51 and up precipitation

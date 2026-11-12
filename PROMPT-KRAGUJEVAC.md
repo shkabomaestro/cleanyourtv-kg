@@ -67,6 +67,8 @@ Stvari koje su se pokazale u praksi:
 - Ugrađeni plejer nekih uređaja ne ume AAC+ radio strimove; zato radio dodatak koristi ExoPlayer.
 - Firmver nekih uređaja pri svakom paljenju ponovo uključi poneku aplikaciju (na Mi TV Sticku Prime Video). To zabeleži,
   ne isključuj je iznova.
+- Na hotspotu sa telefona veza sticka ume da zamre iako piše da je povezan. Radio dodatak to sam leči dok svira
+  (proverava ruter i ponovo se prijavljuje na Wi-Fi); zato cilja `targetSdk 28` i to ne treba "popravljati".
 - Sve mora da može da se vrati: napravi skriptu po uzoru na `work/restore-all.ps1`.
 ```
 

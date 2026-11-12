@@ -9,9 +9,10 @@ android {
     defaultConfig {
         applicationId 'local.cleanyourtv.radio'
         minSdk 26
-        targetSdk 34
-        versionCode 2
-        versionName '1.1.0'
+        // 28, not 34: from 29 on Android ignores an app's request to re-join Wi-Fi (RadioService.retry).
+        targetSdk 28
+        versionCode 3
+        versionName '1.2.0'
     }
 
     buildTypes {
@@ -21,6 +22,10 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt')
             signingConfig signingConfigs.debug
         }
+    }
+    lint {
+        // Sideloaded, never on Google Play: its minimum targetSdk does not apply, and 28 is deliberate (above).
+        disable 'ExpiredTargetSdkVersion'
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17

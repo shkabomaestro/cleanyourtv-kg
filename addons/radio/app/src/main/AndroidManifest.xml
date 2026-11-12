@@ -7,6 +7,11 @@
     <!-- Playback goes on while the launcher is not in front. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <!-- Keeps the Wi-Fi chip out of power save while a station plays (WifiLock needs it). -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Leaves and re-joins the Wi-Fi network when the stream cannot be reached for a while. -->
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
 
     <!-- Only an app signed with the same key (the launcher built on this PC) may tell the service what to play. -->
     <permission android:name="local.cleanyourtv.radio.PLAY" android:protectionLevel="signature" />

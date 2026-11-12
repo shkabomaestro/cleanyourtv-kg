@@ -126,6 +126,15 @@ sistemski plejer ovog sticka odbija AAC+ strimove (Radio Kragujevac); MP3 i AAC 
 sa `.\gradlew.bat assembleRelease` i instalira sa `& $adb install -r addons\radio\app\build\outputs\apk\release\app-release.apk`,
 i to **pre** launchera, jer launcher dozvolu za njega dobija pri svojoj instalaciji.
 
+**Kad veza zamre.** Na ovom sticku, na hotspotu sa telefona, veza ume da „zamre“: TV i dalje piše da je povezan, nema
+nikakvog događaja prekida, ali paketi ne prolaze ni u jednom smeru, po više minuta, dok se Wi-Fi ne ugasi i upali. Android to
+ne primeti, pa se sam ne povezuje ponovo. Zato radio dodatak, dok svira: drži Wi-Fi u punoj snazi (WifiLock), na svakih 5 s
+proverava da li ruter odgovara i, ako tri pokušaja zaredom ostanu bez odgovora, napusti mrežu i ponovo joj se pridruži (Android
+tada bira najbolju sačuvanu mrežu u dometu). Pita samo ruter, pa pad interneta ili same stanice ne dira Wi-Fi. Zbog toga
+dodatak cilja Android 9 (`targetSdk 28`): od Androida 10 obična aplikacija više ne sme da traži ponovno povezivanje.
+To radi samo dok radio svira; za ostale aplikacije i dalje pomaže ručno gašenje i paljenje Wi-Fi-ja.
+Plejer počinje tek kad ima 4 s zvuka u rezervi (8 s posle zastoja), da kratki gubici na mobilnoj vezi ne seku zvuk.
+
 **Moja muzika** su audio fajlovi (MP3, M4A, OGG, FLAC, WAV) iz foldera `music` na TV-u, po abecednom redu imena, ukrug.
 Prazan folder = tišina.
 

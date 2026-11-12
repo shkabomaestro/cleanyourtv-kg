@@ -1,0 +1,66 @@
+{
+  "columns": 5,
+  "dock_apps": [
+    "rs.mts.iris.tv",
+    "com.google.android.youtube.tv",
+    "com.netflix.ninja",
+    "com.stremio.one",
+    "com.nst.smartersplayer"
+  ],
+  "fill_dock": false,
+  "hidden_apps": [
+    "com.android.vending",
+    "com.yablio.sendfilestotv",
+    "com.amazon.amazonvideo.livingroom"
+  ],
+  "rows_below_dock": 0,
+  "app_library": true,
+  "library_ok_opens": true,
+  "greeting_name": "",
+  "header_white": true,
+  "background_color": "#000000",
+  "wallpaper": true,
+  "wallpaper_rotation_minutes": 20,
+  "wallpaper_order": "sequential",
+  "wallpaper_captions": true,
+  "wallpaper_moods": {
+    "morning": [
+      "gimnazija-jutro.jpg",
+      "v3-jutro.jpg",
+      "sumarice-jutro.jpg",
+      "sud-jutro.jpg",
+      "zastava-jutro.jpg",
+      "fica-jutro.jpg"
+    ],
+    "evening": [
+      "gimnazija-dan.jpg",
+      "v3-dan.jpg",
+      "sumarice-dan.jpg",
+      "sud-dan.jpg",
+      "zastava-dan.jpg",
+      "fica-dan.jpg"
+    ],
+    "night": [
+      "gimnazija-noc.jpg",
+      "v3-noc.jpg",
+      "sumarice-noc.jpg",
+      "fica-noc.jpg"
+    ]
+  },
+  "wallpaper_dim": 0,
+  "wallpaper_true_color": true,
+  "dock_glass": true,
+  "dock_opacity": 50,
+  "dock_title": false,
+  "ambient_glow": false,
+  "app_glow": false,
+  "advanced_effects": true,
+  "fade_rows": false,
+  "dock_even_padding": true,
+  "icon_only_buttons": true,
+  "focus_overshoot": true,
+  "glass_style": "glass",
+  "clock_wallpaper": true,
+  "clock_wallpaper_dim": 30,
+  "clock_glow": false
+}

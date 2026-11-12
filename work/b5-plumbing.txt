@@ -1,0 +1,16 @@
+# Batch 5: setup, accounts, backup, printing plumbing
+# kept: com.google.android.tungsten.setupwraith (owns the saved Wi-Fi network; casting needs it)
+com.google.android.partnersetup
+com.google.android.onetimeinitializer
+com.android.providers.contacts
+com.android.providers.calendar
+com.google.android.syncadapters.contacts
+com.google.android.syncadapters.calendar
+com.android.backupconfirm
+com.android.sharedstoragebackup
+com.android.wallpaperbackup
+com.android.printspooler
+com.android.settings.intelligence
+com.android.se
+com.android.cts.ctsshim
+com.android.cts.priv.ctsshim

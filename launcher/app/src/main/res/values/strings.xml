@@ -158,4 +158,8 @@
     <string name="clock_format_system">System</string>
     <string name="clock_format_12">12-hour</string>
     <string name="clock_format_24">24-hour</string>
+    <!-- The sound line under the wallpaper's name (HomeMusic); %1$s is "My music" or a station's name. -->
+    <string name="sound_listening">Listening: %1$s</string>
+    <string name="sound_my_music">My music</string>
+    <string name="sound_off">Radio off</string>
 </resources>

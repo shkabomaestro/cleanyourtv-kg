@@ -1,0 +1,29 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-feature android:name="android.software.leanback" android:required="false" />
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+    <!-- The streams. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Playback goes on while the launcher is not in front. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+
+    <!-- Only an app signed with the same key (the launcher built on this PC) may tell the service what to play. -->
+    <permission android:name="local.cleanyourtv.radio.PLAY" android:protectionLevel="signature" />
+
+    <!-- No screen of its own: the launcher's sound button picks the station. usesCleartextTraffic: some stations
+         (Radio 34) only stream over plain http. -->
+    <application
+        android:allowBackup="false"
+        android:usesCleartextTraffic="true"
+        android:label="@string/app_name"
+        android:icon="@drawable/icon">
+
+        <service
+            android:name=".RadioService"
+            android:exported="true"
+            android:permission="local.cleanyourtv.radio.PLAY"
+            android:foregroundServiceType="mediaPlayback" />
+
+    </application>
+</manifest>

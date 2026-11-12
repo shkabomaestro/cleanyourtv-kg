@@ -31,11 +31,13 @@ public class ClockDream extends DreamService {
     public void onDreamingStarted() {
         super.onDreamingStarted();
         scene.start();
+        HomeMusic.start(this);
     }
 
     @Override
     public void onDreamingStopped() {
         scene.stop();
+        HomeMusic.stop();
         super.onDreamingStopped();
     }
 

@@ -36,11 +36,13 @@ public class ClockActivity extends Activity {
     protected void onResume() {
         super.onResume();
         scene.start();
+        HomeMusic.start(this);
     }
 
     @Override
     protected void onPause() {
         scene.stop();
+        HomeMusic.stop();
         super.onPause();
         finish();   // never left behind in the back stack
     }

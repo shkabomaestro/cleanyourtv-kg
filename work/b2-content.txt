@@ -1,0 +1,8 @@
+# Batch 2: PatchWall, content rows, auto-installs
+com.mitv.tvhome.atv
+com.mitv.tvhome.michannel
+com.mitv.tvhome.mitvplus
+com.xm.webcontent
+com.google.android.tvrecommendations
+android.autoinstalls.config.xiaomi.mibox3
+android.autoinstalls.config.xioami.mibox3

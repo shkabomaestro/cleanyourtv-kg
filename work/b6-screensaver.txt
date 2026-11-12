@@ -1,0 +1,3 @@
+# Batch 6: stock screensavers
+com.google.android.backdrop
+com.android.dreams.basic

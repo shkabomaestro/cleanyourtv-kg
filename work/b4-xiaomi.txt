@@ -1,0 +1,6 @@
+# Batch 4: Xiaomi services for the removed rows
+# kept: com.xiaomi.mitv.updateservice (updates), com.xiaomi.wfdsinkhelperservice (Miracast),
+#       com.xiaomi.android.tvsetup.partnercustomizer (remote pairing), com.mi.bluetooth (remote)
+mitv.service
+com.mitv.download.service
+com.mitv.videoplayer

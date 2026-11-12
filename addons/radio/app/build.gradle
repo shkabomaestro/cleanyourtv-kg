@@ -1,0 +1,34 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'local.cleanyourtv.radio'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'local.cleanyourtv.radio'
+        minSdk 26
+        targetSdk 34
+        versionCode 2
+        versionName '1.1.0'
+    }
+
+    buildTypes {
+        release {
+            // R8 drops the parts of ExoPlayer a radio stream never touches (video, DRM, most containers).
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt')
+            signingConfig signingConfigs.debug
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    // The system MediaPlayer on this stick refuses AAC+ streams; ExoPlayer plays them and MP3 alike.
+    implementation 'androidx.media3:media3-exoplayer:1.4.1'
+}

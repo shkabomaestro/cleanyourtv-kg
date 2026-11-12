@@ -507,6 +507,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         coocaaSources = cfg.coocaaSources;
 
         root = findViewById(R.id.root);
+        NavSounds.load(this);
+        root.getViewTreeObserver().addOnGlobalFocusChangeListener((from, to) -> {
+            if (from != null && to != null) NavSounds.focusMoved();
+        });
         root.setBackgroundColor(cfg.backgroundColor);
         // root fills the window with an opaque colour (Config keeps background_color opaque), so the window's own
         // black under it is a second full-screen fill on every frame for nothing. The starting window still uses
@@ -902,7 +906,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         boolean rtlMenuBar = getResources().getBoolean(R.bool.rtl_menu_bar);
         View.OnKeyListener pillKeys = (v, keyCode, event) -> {
             if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
-            if (keyCode == KeyEvent.KEYCODE_DPAD_UP) return true;
+            if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
+                if (btnSound != null) btnSound.requestFocus();   // the sound line sits above the bar
+                return true;
+            }
             if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
                 // Back to the dock tile Up came from, not wherever the focus finder lands.
                 focusTile(singleRow ? lastFocused : lastFocused % COLUMNS);
@@ -921,6 +928,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         btnReorder.setOnKeyListener(pillKeys);
         btnLibraryTop.setOnKeyListener(pillKeys);
         for (View button : topAppButtons) button.setOnKeyListener(pillKeys);
+        addSoundButton(btnSettings);
         if (advancedEffects) {
             List<View> pills = new ArrayList<>(Arrays.asList(btnInputs, btnWifi, btnVpn, btnReorder, btnLibraryTop, btnSettings));
             pills.addAll(topAppButtons);
@@ -1090,6 +1098,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     protected void onResume() {
         super.onResume();
         resumed = true;
+        HomeMusic.start(this);
         // A festival that started or ended while Home was in the background: rebuild with or without it.
         if (festive != festival.active(LocalDate.now())) {
             recreate();
@@ -1306,6 +1315,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     protected void onPause() {
         super.onPause();
         resumed = false;
+        HomeMusic.stop();
         // No UP reaches a paused Home, so a vendor-key hold it saw go down would still open its app later.
         // Only Home's own share is dropped: a key service that saw the same DOWN keeps its hold.
         RemoteKeys.release(this);
@@ -1429,6 +1439,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      */
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
+        NavSounds.key(event);
         if (homeIgnoreChannelKeys && RemoteKeys.isChannelKey(event.getKeyCode())) return true;
         // Vendor keys (TCL Netflix button, 4062) never reach the key services, only the focused window, so their
         // "hold:" entries run here too or nowhere. Only while resumed: onPause releases Home's holds, and a DOWN
@@ -3616,6 +3627,76 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private static void fold(View view, List<View> folded) {
         view.setVisibility(View.GONE);
         folded.add(view);
+    }
+
+    // ---- local addition: the sound line under the wallpaper's name (HomeMusic) --------------------
+
+    private TextView btnSound;
+    private RadioIcon radioIcon;
+    private String soundSource;
+    private final Runnable applySound = () -> HomeMusic.select(this, soundSource);
+
+    /** "Listening: ..." above the top bar's buttons, reached with Up from them; Left and Right change the source. */
+    private void addSoundButton(View below) {
+        soundSource = HomeMusic.source(this);
+        radioIcon = new RadioIcon(density);
+        radioIcon.setBounds(0, 0, radioIcon.getIntrinsicWidth(), radioIcon.getIntrinsicHeight());
+        btnSound = new TextView(this);
+        btnSound.setTextSize(13);
+        btnSound.setSingleLine(true);
+        btnSound.setGravity(Gravity.CENTER_VERTICAL);
+        btnSound.setCompoundDrawables(radioIcon, null, null, null);
+        btnSound.setCompoundDrawablePadding((int) (8 * density));
+        btnSound.setFocusable(true);
+        btnSound.setOnFocusChangeListener((v, focused) -> showSound());
+        btnSound.setOnKeyListener((v, code, event) -> {
+            boolean ok = code == KeyEvent.KEYCODE_DPAD_CENTER || code == KeyEvent.KEYCODE_ENTER;
+            if (event.getAction() != KeyEvent.ACTION_DOWN) return ok;
+            if (code == KeyEvent.KEYCODE_DPAD_LEFT) stepSound(-1);
+            else if (code == KeyEvent.KEYCODE_DPAD_RIGHT || ok) stepSound(1);
+            else if (code == KeyEvent.KEYCODE_DPAD_DOWN) below.requestFocus();
+            else if (code != KeyEvent.KEYCODE_DPAD_UP) return false;   // nothing above it: Up stays here
+            return true;
+        });
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+                (int) (30 * density), Gravity.TOP | Gravity.END);
+        lp.topMargin = (int) (16 * density);   // over the top bar's buttons, clear of the picture and its caption
+        lp.setMarginEnd((int) (56 * density));
+        root.addView(btnSound, lp);
+        showSound();
+    }
+
+    /** My music, then the stations in stations.txt, then off: the order Right walks through. */
+    private List<String> soundSources() {
+        List<String> sources = new ArrayList<>();
+        sources.add(HomeMusic.MUSIC);
+        for (String[] station : HomeMusic.stations(this)) sources.add(station[0]);
+        sources.add(HomeMusic.OFF);
+        return sources;
+    }
+
+    private void stepSound(int step) {
+        List<String> sources = soundSources();
+        int at = Math.max(0, sources.indexOf(soundSource));
+        soundSource = sources.get((at + step + sources.size()) % sources.size());
+        NavSounds.move();
+        showSound();
+        root.removeCallbacks(applySound);
+        root.postDelayed(applySound, 600);   // skipping past stations should not open each stream
+    }
+
+    /** Quiet text while unfocused, the top bar's pill with arrows while focused. */
+    private void showSound() {
+        boolean focused = btnSound.isFocused();
+        String text = HomeMusic.OFF.equals(soundSource) ? getString(R.string.sound_off) : getString(R.string.sound_listening,
+                HomeMusic.MUSIC.equals(soundSource) ? getString(R.string.sound_my_music) : soundSource);
+        btnSound.setText(focused ? "‹   " + text + "   ›" : text);
+        btnSound.setBackgroundResource(focused ? R.drawable.pill_bg : 0);
+        int pad = (int) (12 * density);
+        btnSound.setPadding(pad, 0, pad, 0);
+        int ink = focused ? 0xFF111111 : 0xB3FFFFFF;   // pill_text's focused colour; quieter than the caption otherwise
+        btnSound.setTextColor(ink);
+        btnSound.setShadowLayer(focused ? 0 : 6 * density, 0, focused ? 0 : density, 0xCC000000);
     }
 
     private PopupWindow glassPopup(View panel, int width) {

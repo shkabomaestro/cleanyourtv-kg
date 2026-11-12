@@ -1,0 +1,5 @@
+# Mi TV Stick MiTV-AESP0, Android 10 (QT.2514). Batch 1: telemetry
+com.miui.tv.analytics
+com.xiaomi.statistic
+com.google.android.feedback
+com.google.android.tv.bugreportsender

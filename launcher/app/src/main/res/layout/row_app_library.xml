@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Local change for this TV: the row is 60dp taller and the pill sits at its bottom, so with rows_below_dock 0
+     the pill starts below the bottom edge of Home instead of peeking over it. Pressing Down scrolls the whole
+     row into view (MainActivity.focusLibrary). Upstream: 84dp high, pill centred. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent" android:layout_height="84dp">
+    android:layout_width="match_parent" android:layout_height="144dp">
     <TextView android:id="@+id/btnLibrary" style="@style/TopButton"
-        android:layout_gravity="center" android:text="@string/app_library"
+        android:layout_gravity="bottom|center_horizontal" android:layout_marginBottom="14dp"
+        android:text="@string/app_library"
         android:drawableStart="@drawable/ic_apps_pill" />
 </FrameLayout>

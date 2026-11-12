@@ -1,0 +1,15 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="320dp"
+    android:height="180dp"
+    android:viewportWidth="320"
+    android:viewportHeight="180">
+    <path android:fillColor="#7B1E1E" android:pathData="M0,0h320v180h-320z" />
+    <!-- A dot with three broadcast arcs on each side. -->
+    <path android:fillColor="#FFFFFF" android:pathData="M160,90m-10,0a10,10 0,1 1,20 0a10,10 0,1 1,-20 0" />
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="7" android:strokeLineCap="round"
+        android:pathData="M184,66a34,34 0,0 1,0 48M136,66a34,34 0,0 0,0 48" />
+    <path android:strokeColor="#CCFFFFFF" android:strokeWidth="7" android:strokeLineCap="round"
+        android:pathData="M202,48a59,59 0,0 1,0 84M118,48a59,59 0,0 0,0 84" />
+    <path android:strokeColor="#88FFFFFF" android:strokeWidth="7" android:strokeLineCap="round"
+        android:pathData="M220,30a85,85 0,0 1,0 120M100,30a85,85 0,0 0,0 120" />
+</vector>

@@ -1,0 +1,7 @@
+# Batch 3: preloaded apps the owner does not use (Netflix and YouTube kept)
+com.amazon.amazonvideo.livingroom
+com.google.android.play.games
+com.google.android.youtube.tvmusic
+com.google.android.music
+com.google.android.videos
+com.xiaomo.tv.milegal

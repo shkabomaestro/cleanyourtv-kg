@@ -12,12 +12,20 @@ if (-not $env:JAVA_HOME) {
     $jdk = Get-ChildItem 'C:\Program Files\Eclipse Adoptium' -Directory -Filter 'jdk-17*' -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($jdk) { $env:JAVA_HOME = $jdk.FullName }
 }
+if (-not $env:ANDROID_HOME) { $env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk" }
 function Step($text) { Write-Host "`n=== $text ===" -ForegroundColor Cyan }
 function Check($what) { if ($LASTEXITCODE -ne 0) { throw "$what nije uspelo (kod $LASTEXITCODE)" } }
 
 Step 'Povezivanje sa stickom'
 & $adb connect "${TvHost}:5555" | Out-Host
-$state = (& $adb -s "${TvHost}:5555" get-state 2>$null)
+$state = ''
+for ($i = 0; $i -lt 40; $i++) {   # novi racunar: TV pita "Allow USB debugging?" - imas dva minuta da potvrdis
+    $state = "$(& $adb -s "${TvHost}:5555" get-state 2>$null)".Trim()
+    if ($state -eq 'device') { break }
+    if ($i -eq 0) { Write-Host 'Na TV-u stikliraj "Always allow from this computer" i pritisni OK...' -ForegroundColor Yellow }
+    Start-Sleep -Seconds 3
+    & $adb connect "${TvHost}:5555" | Out-Null
+}
 if ($state -ne 'device') { throw "Stick ne odgovara kao 'device' (stanje: $state). Ukljuci USB debugging i potvrdi 'Always allow' na TV-u." }
 
 Step '1/4 Radio dodatak (vesti i vreme)'
@@ -28,8 +36,16 @@ Pop-Location
 
 if (-not $SkipPhotos) {
     Step '2/4 Pedeset novih fotografija (Wikimedia Commons, nekoliko minuta)'
+    # Tvoje slike (moja-*.jpg) koje su vec na sticku ostaju, i kad ovaj racunar nema originale.
+    $d = '/sdcard/Android/data/com.gathin.tvhome/files'
+    New-Item -ItemType Directory -Force work\kg-from-tv | Out-Null
+    foreach ($f in (& $adb -s "${TvHost}:5555" shell "ls $d/wallpapers/ 2>/dev/null") -split "`r?`n") {
+        $f = $f.Trim()
+        if ($f -like 'moja-*.jpg') { & $adb -s "${TvHost}:5555" pull "$d/wallpapers/$f" "work\kg-from-tv\$f" | Out-Host }
+    }
     & $py -I work\kg_more.py; Check 'Izbor fotografija'
     & $py -I work\kg_grade.py; Check 'Obrada fotografija'
+    & $py -I work\kg_keep_own.py; Check 'Cuvanje tvojih slika'
 }
 
 Step '3/4 Launcher'

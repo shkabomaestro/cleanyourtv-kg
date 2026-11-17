@@ -930,6 +930,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         for (View button : topAppButtons) button.setOnKeyListener(pillKeys);
         addSoundButton(btnSettings);
         addWeatherLine();
+        addLiveExtras(cfg);
         if (advancedEffects) {
             List<View> pills = new ArrayList<>(Arrays.asList(btnInputs, btnWifi, btnVpn, btnReorder, btnLibraryTop, btnSettings));
             pills.addAll(topAppButtons);
@@ -1153,6 +1154,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (gameDay != null) gameDay.start();
         sky.update();
         wallpaperPlayer.start();
+        if (weatherFx != null) weatherFx.start();
+        if (newsTicker != null) {
+            newsTicker.start();
+            root.removeCallbacks(newsTick);
+            newsTick.run();
+        }
         handler.postDelayed(minuteTick, MINUTE_MS);
         if (festive && lamp != null) {
             lamp.start();
@@ -1329,6 +1336,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         root.removeCallbacks(showIdleClock);
         endReorder();   // Home or another app while reordering keeps the order so far
         wallpaperPlayer.stop();
+        if (weatherFx != null) weatherFx.stop();
+        if (newsTicker != null) newsTicker.stop();
+        root.removeCallbacks(newsTick);
         stopAmbientAnimation();
         hero.animate().cancel();
         ambient.animate().cancel();
@@ -3689,6 +3699,40 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         // The same soft shadow under the greeting, the clock and the date: a photo is often pale where they sit.
         for (int id : new int[]{R.id.greeting, R.id.clock, R.id.date}) {
             ((TextView) findViewById(id)).setShadowLayer(6 * density, 0, density, 0xCC000000);
+        }
+    }
+
+    // ---- local addition: live weather over the picture (WeatherFx) and the news ticker (NewsTicker) ----
+
+    private WeatherFx weatherFx;
+    private NewsTicker newsTicker;
+    /** While Home stays up: ask the add-on for headlines again (NewsTicker.refresh skips a question asked too soon). */
+    private final Runnable newsTick = new Runnable() {
+        @Override public void run() {
+            if (newsTicker != null) newsTicker.refresh(MainActivity.this, false);
+            root.postDelayed(this, 60_000);
+        }
+    };
+
+    /**
+     * The weather layer goes right above the wallpaper, under the sky, the clock and the tiles; the ticker along the
+     * bottom, above everything, with the content lifted by its height so it never covers the dock. Each only when
+     * the theme turns it on (config.json weather_effects, news_ticker).
+     */
+    private void addLiveExtras(Config cfg) {
+        if (Extras.weatherEffects(this) && cfg.wallpaperEnabled) {
+            weatherFx = new WeatherFx(this);
+            root.addView(weatherFx, wallpaperPlayer.layerAbove(), new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        }
+        if (Extras.newsTicker(this)) {
+            int height = (int) (38 * density);
+            newsTicker = new NewsTicker(this);
+            root.addView(newsTicker, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, height,
+                    Gravity.BOTTOM));
+            View content = (View) findViewById(R.id.leftBlock).getParent().getParent();
+            content.setPadding(content.getPaddingLeft(), content.getPaddingTop(), content.getPaddingRight(),
+                    content.getPaddingBottom() + height);
         }
     }
 

@@ -475,7 +475,7 @@ ENUMS = {
     "glow_style": (("radial", "horizon"), "radial", True),
     "glass_style": (("glass", "rim", "halo"), "glass", True),
     "clock_format": (("12", "24", "system"), "system", True),
-    "wallpaper_order": (("shuffle", "sequential"), "shuffle", False),
+    "wallpaper_order": (("shuffle", "sequential", "rounds"), "shuffle", False),
 }
 
 

@@ -283,8 +283,10 @@
     <!-- The language the launcher shows itself in, as a language tag ("vi", "pt-BR", "ar-EG-u-nu-latn"
          for Arabic with Western digits), instead of the TV's. For firmware
          that has no menu entry for the owner's language although the launcher is translated into it (a China-market
-         Xiaomi offers Chinese and English only). Empty, the default, follows the TV. A theme can set it ("locale"). -->
-    <string name="locale" translatable="false"></string>
+         Xiaomi offers Chinese and English only). Empty, the default, follows the TV. A theme can set it ("locale").
+         Local: Serbian in Cyrillic at every start, whatever the TV is set to (a TV on Serbian Latin would otherwise
+         get values-b+sr+Latn). -->
+    <string name="locale" translatable="false">sr-Cyrl-RS</string>
 
     <!-- A name after the greeting: "Mr. Trịnh" shows GOOD MORNING, MR. TRỊNH. Empty: the greeting alone. -->
     <string name="greeting_name" translatable="false"></string>
@@ -562,4 +564,10 @@
     <!-- Tiles drawn from the app's icon and name instead of its banner (for banners that crop badly). -->
     <string-array name="icon_tiles" translatable="false">
     </string-array>
+
+    <!-- Local addition (Extras): the weather outside drawn live over the wallpaper (WeatherFx), and the news ticker
+         along the bottom of Home (NewsTicker). Both need the radio add-on; a theme turns them on (config.json
+         "weather_effects", "news_ticker"). -->
+    <bool name="weather_effects">false</bool>
+    <bool name="news_ticker">false</bool>
 </resources>

@@ -32,6 +32,54 @@ final class Weather {
     private static String shown, said = "";
     private static int aqi = -1;
 
+    /**
+     * Local addition: the sky as the live weather over the picture needs it (WeatherFx). code is the WMO weather code
+     * (0 clear ... 99 thunderstorm with hail), day 1 by day, 0 by night and -1 when unknown, precipitation mm in the
+     * last hour, wind km/h. An older add-on sends only the words: they give a rough code ({@link #codeOf}).
+     */
+    static final class Sky {
+        final int code, day;
+        final float precipitation, wind;
+
+        Sky(int code, int day, float precipitation, float wind) {
+            this.code = code;
+            this.day = day;
+            this.precipitation = precipitation;
+            this.wind = wind;
+        }
+    }
+
+    /** The last sky read, for every screen in this process (Home and the screensaver); null until one is read. */
+    static volatile Sky sky;
+
+    /** A WMO code for the add-on's three words, when it sends no code of its own. */
+    static int codeOf(String description) {
+        int kind = kind(description == null ? "" : description);
+        return kind == CLEAR ? 0 : kind == CLOUDY ? 3 : 61;
+    }
+
+    /** Reads the add-on's current row into {@link #sky}; call off the main thread. Missing add-on: sky stays as it was. */
+    static void askSky(android.content.Context context) {
+        try (Cursor row = context.getContentResolver().query(Uri.parse(PROVIDER + "now"), null, null, null, null)) {
+            if (row != null && row.moveToFirst()) sky = skyOf(row);
+        } catch (RuntimeException e) {
+            // no add-on, or another signing key
+        }
+    }
+
+    private static Sky skyOf(Cursor row) {
+        int code = intColumn(row, "code", -1);
+        if (code < 0) code = codeOf(row.getString(1));
+        int precipitationAt = row.getColumnIndex("precipitation"), windAt = row.getColumnIndex("wind");
+        return new Sky(code, intColumn(row, "day", -1),
+                precipitationAt < 0 ? 0 : row.getFloat(precipitationAt), windAt < 0 ? 0 : row.getFloat(windAt));
+    }
+
+    private static int intColumn(Cursor row, String name, int otherwise) {
+        int at = row.getColumnIndex(name);
+        return at < 0 || row.isNull(at) ? otherwise : row.getInt(at);
+    }
+
     /** The service's own words for the weather (Serbian, Latin script: "Slaba kiša", "Pretežno vedro") as one of three. */
     static int kind(String description) {
         String d = description.toLowerCase(Locale.ROOT);
@@ -63,6 +111,7 @@ final class Weather {
                 if (row != null && row.moveToFirst()) {
                     temperature = Math.round(Float.parseFloat(row.getString(0))) + "°C";
                     description = row.getString(1);
+                    sky = skyOf(row);
                 }
             } catch (RuntimeException e) {
                 temperature = null;   // the add-on is missing, signed with another key, or sent something that is not a number

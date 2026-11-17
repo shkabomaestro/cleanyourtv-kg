@@ -805,6 +805,26 @@ final class Config {
         }
     }
 
+    /** Local addition: the theme's config.json (or its kept copy) for the fork's own keys (Extras); null when there is none. */
+    static JSONObject overlay(Context ctx) {
+        File dir = dir(ctx);
+        return readOverlay(ctx, dir != null ? new File(dir, FILE_NAME) : null,
+                Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState()));
+    }
+
+    /** Local addition (Extras): {weather_effects, news_ticker}, config.xml's defaults overridden by the theme. */
+    static boolean[] liveExtras(Context ctx) {
+        Resources res = ctx.getResources();
+        boolean weatherEffects = res.getBoolean(R.bool.weather_effects);
+        boolean newsTicker = res.getBoolean(R.bool.news_ticker);
+        JSONObject json = overlay(ctx);
+        if (json != null) {
+            weatherEffects = bool(json, "weather_effects", weatherEffects);
+            newsTicker = bool(json, "news_ticker", newsTicker);
+        }
+        return new boolean[]{weatherEffects, newsTicker};
+    }
+
     /** Reads and parses the overlay; any problem means "no overlay", never a crash on the home screen. */
     /**
      * The overlay, or before external storage is mounted, the copy kept from the last time it was read. Home can

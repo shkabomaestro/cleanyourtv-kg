@@ -37,5 +37,12 @@
             android:exported="true"
             android:readPermission="local.cleanyourtv.radio.PLAY" />
 
+        <!-- The headlines for the launcher's news ticker (kajron); same signing key only. -->
+        <provider
+            android:name=".NewsProvider"
+            android:authorities="local.cleanyourtv.radio.news"
+            android:exported="true"
+            android:readPermission="local.cleanyourtv.radio.PLAY" />
+
     </application>
 </manifest>

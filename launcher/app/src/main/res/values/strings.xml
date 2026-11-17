@@ -164,4 +164,6 @@
     <string name="sound_off">Radio off</string>
     <!-- Beside the temperature under the clock (Weather); %1$d is the US air quality index. -->
     <string name="air_quality">Air %1$d AQI</string>
+    <!-- The label at the left of the news ticker along the bottom of Home (NewsTicker). -->
+    <string name="news_ticker_label">NEWS</string>
 </resources>

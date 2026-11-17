@@ -80,7 +80,7 @@ final class WallpaperPlayer {
         String collection = collectionKey(files);
         if (!collection.equals(preferences.getString("collection", ""))) {
             preferences.edit().putString("collection", collection)
-                    .remove("image").remove("changed").apply();
+                    .remove("image").remove("changed").remove("played").apply();
         }
         DisplayMetrics metrics = context.getResources().getDisplayMetrics();
         width = metrics.widthPixels;
@@ -107,7 +107,7 @@ final class WallpaperPlayer {
         String previous = preferences.getString("image", "");
         List<File> playable = playable();
         File first = WallpaperRotation.find(playable, previous);
-        if (first == null) first = WallpaperRotation.pick(playable, previous, order, random);
+        if (first == null) first = next(playable, previous);
         while (first != null) {
             Bitmap bitmap = decode(first);
             if (bitmap != null) {
@@ -124,13 +124,34 @@ final class WallpaperPlayer {
             }
             files.remove(first);   // unreadable or over 4K: try another, or keep the plain colour
             playable = playable();
-            first = WallpaperRotation.pick(playable, previous, order, random);
+            first = next(playable, previous);
         }
     }
 
     void start() {
         active = true;
         update();
+    }
+
+    /** The next picture for the theme's order; rounds keeps its round in the preferences (WallpaperRotation). */
+    private File next(List<File> playable, String previous) {
+        return pickNext(preferences, playable, previous, order, random);
+    }
+
+    /** Shared with the screensaver (ClockScene), which carries the same rotation on in the same preferences. */
+    static File pickNext(SharedPreferences preferences, List<File> playable, String previous, String order, Random random) {
+        if (!WallpaperRotation.ORDER_ROUNDS.equals(order)) return WallpaperRotation.pick(playable, previous, order, random);
+        Set<String> played = WallpaperRotation.played(preferences.getString("played", ""));
+        if (previous != null && !previous.isEmpty()) played.add(previous);   // the one on screen has had its turn
+        File picked = WallpaperRotation.unplayed(playable, played, previous, random);
+        preferences.edit().putString("played", WallpaperRotation.played(played)).apply();
+        return picked;
+    }
+
+    /** Where a layer that belongs right above the picture goes among root's children (local: WeatherFx). */
+    int layerAbove() {
+        int at = root.indexOfChild(image);
+        return at < 0 ? 0 : at + 1;
     }
 
     void stop() {
@@ -173,7 +194,7 @@ final class WallpaperPlayer {
         File selected = WallpaperRotation.find(playable, previous);
         long changed = preferences.getLong("changed", 0);
         if (selected == null || WallpaperRotation.due(changed, System.currentTimeMillis(), interval)) {
-            selected = WallpaperRotation.pick(playable, previous, order, random);
+            selected = next(playable, previous);
         }
         if (selected == null || selected.getName().equals(displayed)) return;
         File next = selected;

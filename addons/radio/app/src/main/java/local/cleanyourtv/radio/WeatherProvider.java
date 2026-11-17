@@ -19,7 +19,9 @@ import java.nio.file.Files;
 
 /**
  * Kragujevac's weather and air for the launcher's line under the clock, which has no network of its own.
- * ".../now" answers one row {temperature, description, at}: Open-Meteo's current estimate for the town, new every
+ * ".../now" answers one row {temperature, description, at, code, day, precipitation, clouds, wind} (the last five
+ * drive the live weather drawn over the picture: the WMO weather code, 1 by day and 0 by night, mm of rain or snow in
+ * the last hour, % of sky in cloud, wind in km/h): Open-Meteo's current estimate for the town, new every
  * fifteen minutes (a weather model's figure, not a thermometer's: the owner chose it over the weather service's
  * hourly measurement in whole degrees). ".../air" answers one row {aqi, at}: the US air quality index
  * IQAir gives for the town. Either answers no row when nothing recent is known. Read on query, the weather at
@@ -28,7 +30,8 @@ import java.nio.file.Files;
 public class WeatherProvider extends ContentProvider {
     private static final long MINUTE = 60_000, HOUR = 60 * MINUTE;
     /** Kragujevac's centre. Another town: its latitude and longitude. Answers {"current":{"temperature_2m":17.6,"weather_code":3,...}}. */
-    private static final String FEED = "https://api.open-meteo.com/v1/forecast?latitude=44.01&longitude=20.91&current=temperature_2m,weather_code";
+    private static final String FEED = "https://api.open-meteo.com/v1/forecast?latitude=44.01&longitude=20.91"
+            + "&current=temperature_2m,weather_code,is_day,precipitation,cloud_cover,wind_speed_10m";
     /** IQAir's API, the place as its site names it (iqair.com/serbia/central-serbia/kragujevac); the key follows. */
     private static final String AIR = "https://api.airvisual.com/v2/city?city=Kragujevac&state=Central%20Serbia&country=Serbia&key=";
     /** The owner's own IQAir key, one line, pushed over adb into this app's files folder. Without it: no air row. */
@@ -54,14 +57,25 @@ public class WeatherProvider extends ContentProvider {
                 int code = current.getInt("weather_code");   // WMO: 0-1 clear, 2-48 cloud and fog, 51 and up precipitation
                 saved.edit().putString("temperature", String.valueOf(current.getDouble("temperature_2m")))
                         // the words the launcher's Weather.kind() sorts into its three icons
-                        .putString("description", code <= 1 ? "Vedro" : code < 50 ? "Oblačno" : "Padavine").putLong("at", now).apply();
+                        .putString("description", code <= 1 ? "Vedro" : code < 50 ? "Oblačno" : "Padavine")
+                        // the rest is for the launcher's live weather over the picture (WeatherFx)
+                        .putInt("code", code).putInt("day", current.optInt("is_day", -1))
+                        .putFloat("precipitation", (float) current.optDouble("precipitation", 0))
+                        .putInt("clouds", current.optInt("cloud_cover", -1))
+                        .putFloat("wind", (float) current.optDouble("wind_speed_10m", 0))
+                        .putLong("at", now).apply();
             } catch (Exception e) {
                 // no answer or another shape: keep what was read before
             }
         }
-        MatrixCursor row = new MatrixCursor(new String[]{"temperature", "description", "at"});
+        MatrixCursor row = new MatrixCursor(new String[]{"temperature", "description", "at", "code", "day", "precipitation",
+                "clouds", "wind"});
         long at = saved.getLong("at", 0);
-        if (now - at < 3 * HOUR) row.addRow(new Object[]{saved.getString("temperature", ""), saved.getString("description", ""), at});
+        if (now - at < 3 * HOUR) {
+            row.addRow(new Object[]{saved.getString("temperature", ""), saved.getString("description", ""), at,
+                    saved.getInt("code", -1), saved.getInt("day", -1), saved.getFloat("precipitation", 0),
+                    saved.getInt("clouds", -1), saved.getFloat("wind", 0)});
+        }
         return row;
     }
 

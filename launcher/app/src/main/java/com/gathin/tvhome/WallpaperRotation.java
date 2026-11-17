@@ -5,17 +5,54 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Random;
+import java.util.Set;
 
 final class WallpaperRotation {
     /** Playback orders persisted in config.json (wallpaper_order). */
     static final String ORDER_SEQUENTIAL = "sequential";
     static final String ORDER_SHUFFLE = "shuffle";
+    /**
+     * Local addition: shuffled in rounds. Every picture gets its turn, in random order, before any comes back; then a
+     * new round starts, never with the picture just shown. The round survives a restart (WallpaperPlayer keeps it).
+     */
+    static final String ORDER_ROUNDS = "rounds";
 
     static boolean validOrder(String order) {
-        return ORDER_SEQUENTIAL.equals(order) || ORDER_SHUFFLE.equals(order);
+        return ORDER_SEQUENTIAL.equals(order) || ORDER_SHUFFLE.equals(order) || ORDER_ROUNDS.equals(order);
+    }
+
+    /**
+     * rounds: a random picture of images that this round has not shown yet, added to played. When every one of
+     * images has been played, they all leave played and a new round begins without previous. played may hold names
+     * from other groups (wallpaper_moods): each group goes round on its own.
+     */
+    static File unplayed(List<File> images, Set<String> played, String previous, Random random) {
+        List<File> candidates = new ArrayList<>();
+        for (File image : images) if (!played.contains(image.getName())) candidates.add(image);
+        if (candidates.isEmpty()) {
+            for (File image : images) played.remove(image.getName());
+            candidates.addAll(images);
+            if (candidates.size() > 1) candidates.removeIf(image -> image.getName().equals(previous));
+        }
+        if (candidates.isEmpty()) return null;
+        File picked = candidates.get(random.nextInt(candidates.size()));
+        played.add(picked.getName());
+        return picked;
+    }
+
+    /** The played names as kept in the preferences: one per line. */
+    static Set<String> played(String kept) {
+        Set<String> names = new LinkedHashSet<>();
+        if (kept != null) for (String name : kept.split("\n")) if (!name.isEmpty()) names.add(name);
+        return names;
+    }
+
+    static String played(Set<String> names) {
+        return String.join("\n", names);
     }
 
     static List<File> images(File directory) {
@@ -29,7 +66,7 @@ final class WallpaperRotation {
                     && (name.endsWith(".jpg") || name.endsWith(".jpeg")
                     || name.endsWith(".png") || name.endsWith(".webp"))) {
                 result.add(entry);
-                if (result.size() == 100) break;
+                if (result.size() == 200) break;   // local: 200, for the Kragujevac theme's eighty-odd pictures and room to grow
             }
         }
         return result;

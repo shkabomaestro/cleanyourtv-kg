@@ -215,7 +215,7 @@ class ShippedConfigValuesTest(unittest.TestCase):
         # A constant parse that found nothing would let every value through, the way it did for "off".
         self.assertEqual(self.enums.get("glow_style"), ({"radial", "horizon"}, "trimmed"))
         self.assertEqual(self.enums.get("glass_style"), ({"glass", "rim", "halo"}, "trimmed"))
-        self.assertEqual(self.enums.get("wallpaper_order"), ({"sequential", "shuffle"}, "exact"))
+        self.assertEqual(self.enums.get("wallpaper_order"), ({"sequential", "shuffle", "rounds"}, "exact"))
 
     def test_a_value_outside_the_set_is_reported(self):
         # "off" is the value the two themes shipped: a string, so the type sweep passed it and
@@ -223,7 +223,7 @@ class ShippedConfigValuesTest(unittest.TestCase):
         # case, validOrder() does not, so `Sequential` is not `sequential`.
         for key, value, listed in (("glow_style", "off", "horizon, radial"),
                                    ("glass_style", "frosted", "glass, halo, rim"),
-                                   ("wallpaper_order", "Sequential", "sequential, shuffle")):
+                                   ("wallpaper_order", "Sequential", "rounds, sequential, shuffle")):
             with self.subTest(key=key, value=value):
                 reported = dict(problems({key: value}, self.kinds, self.enums))
                 self.assertIn(key, reported, f"`{key}: {value}` was let through")

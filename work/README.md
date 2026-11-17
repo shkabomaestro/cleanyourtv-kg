@@ -216,3 +216,31 @@ računaru taj alat često javi „did not answer in 3 s“ i kad je port zatvore
 oko 3,5 s; tada važi samo poruka „is closed: the TV refused the connection“ dobijena sa dužim čekanjem.
 Ovlašćenje ovog računara za ADB ostaje zapamćeno na sticku dok ga ne opozoveš u Opcijama za programere
 („Opozovi ovlašćenja za USB otklanjanje grešaka“); dok je ADB ugašen, ono ničemu ne služi.
+
+## Novembarsko ažuriranje (vreme uživo, kajron, ćirilica, 50 novih slika)
+
+Sve odjednom (radio dodatak, slike, launcher, tema):
+```powershell
+powershell -ExecutionPolicy Bypass -File work\kg-update.ps1 -TvHost <tv ip>
+```
+
+- **Ćirilica pri svakom pokretanju.** `locale` je `sr-Cyrl-RS` i u `config.xml` i u temi, pa je launcher na srpskoj
+  ćirilici čak i kad je TV podešen na latinicu ili engleski.
+- **Slike u turnusima.** `wallpaper_order: "rounds"`: na 10 minuta nova slika, svaka se prikaže jednom pre nego što se
+  bilo koja ponovi; turnus se pamti i posle restarta, a screensaver ga nastavlja. Jutarnje/popodnevne i noćne slike i
+  dalje idu po dobu dana (svaka grupa ima svoj turnus).
+- **50 novih slika.** `work\kg_more.py` traži na Wikimedia Commons vedre i šarene fotografije Kragujevca (bar 1920×1080
+  posle isecanja na 16:9), preskače spomenike, muzej „21. oktobar“, groblja i sve što tema već ima, boduje živost boja,
+  osvetljenost i oštrinu, izbacuje skoro iste kadrove i najviše tri istog motiva. Pregled: `work\kragujevac-nove.jpg`.
+  Slika koju ne želiš: njen broj sa pregleda u `work\kg-more-skip.txt`, pa ponovo `kg_more.py` i `kg_grade.py`.
+  Slika sa porukom kod muzeja (bivša `sumarice-noc.jpg`) je izbačena; tvoje slike (teren) ostaju.
+- **Vreme uživo preko slike** (`weather_effects`): sunce greje i osvetljava sliku sa zracima, oblaci plove, magla se
+  vuče, kiša pada gušće što je jača, kapi se hvataju i cure niz „staklo“, pljusak prska pri dnu, sneg veje, oluja
+  povremeno blago sevne. Podatak: Open-Meteo za Kragujevac preko radio dodatka, osvežava se na 15 minuta.
+- **Kajron** (`news_ticker`): vesti dole na ekranu, sa crvenom oznakom „ВЕСТИ“. Izvori: Mozzart Sport, RTS (sport i
+  vesti), Mondo (sport, Srbija, svet). Bez crne hronike i bez kladioničarskih saveta; sport je na prvom mestu (dva
+  sportska naslova pa jedna vest), Radnički i Kragujevac, Zvezda, Partizan, Jokić, Đoković i reprezentacija imaju
+  prednost, a ista vest sa više portala ide jednom i gore. Sve je na ćirilici (latinični naslovi se presloviljavaju).
+  Osvežava se na 10 minuta. Izvori i reči za filtriranje su u `addons\radio\...\News.java`.
+- Isključivanje: u `themes\kragujevac\config.json` stavi `"weather_effects": false` ili `"news_ticker": false` i
+  pošalji temu.

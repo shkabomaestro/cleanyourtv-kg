@@ -58,6 +58,7 @@ final class ClockScene {
     private int wallpaperGeneration;
     /** clock_wallpaper with a collection: the pictures, how long each lasts, and how the next one is picked. */
     private List<File> rotation;
+    private android.content.SharedPreferences rotationPrefs;
     private long rotationMs;
     private long shownMs;
     private String order;
@@ -70,6 +71,7 @@ final class ClockScene {
             moveClock();
             shiftGlow();
             advanceWallpaper();
+            askSky();
             handler.postDelayed(this, MOVE_MS);
         }
     };
@@ -98,12 +100,18 @@ final class ClockScene {
         handler.postDelayed(tick, MOVE_MS);
         clockRefresh.start();
         if (wallpaperFile != null && !wallpaperShown) loadWallpaper();
+        if (weatherFx != null) {
+            weatherFx.start();
+            skyAsked = 0;
+            askSky();
+        }
     }
 
     void stop() {
         handler.removeCallbacksAndMessages(null);   // the tick and any glow steps still queued
         clockRefresh.stop();
         content.animate().cancel();
+        if (weatherFx != null) weatherFx.stop();
         wallpaperGeneration++;   // a decode still running must not attach its picture to a stopped scene
     }
 
@@ -137,8 +145,8 @@ final class ClockScene {
             // Start on the picture Home is showing. WallpaperPlayer records it under the same
             // preferences and the screensaver runs in the same process, so this is just a read.
             rotation = new ArrayList<>(cfg.wallpapers);
-            String shown = ctx.getSharedPreferences("wallpaper_rotation", Context.MODE_PRIVATE)
-                    .getString("image", "");
+            rotationPrefs = ctx.getSharedPreferences("wallpaper_rotation", Context.MODE_PRIVATE);
+            String shown = rotationPrefs.getString("image", "");
             File current = WallpaperRotation.find(rotation, shown);
             wallpaperFile = current != null ? current : rotation.get(0);
             // Home only rotates while it is visible, so the screensaver carries the rotation on
@@ -151,6 +159,28 @@ final class ClockScene {
         }
         wallpaperShade = (cfg.clockWallpaperDim * 255 / 100) << 24;
         wallpaperRes = ctx.getResources();
+        // Local: the same live weather as on Home, right over the picture and under the clock.
+        if (wallpaperFile != null && weatherFx == null && Extras.weatherEffects(ctx)) {
+            appContext = ctx.getApplicationContext();
+            weatherFx = new WeatherFx(ctx);
+            android.view.ViewGroup parent = (android.view.ViewGroup) ambient.getParent();
+            parent.addView(weatherFx, parent.indexOfChild(ambient) + 1, new android.view.ViewGroup.LayoutParams(
+                    android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.MATCH_PARENT));
+        }
+    }
+
+    private WeatherFx weatherFx;
+    private Context appContext;
+    private long skyAsked;
+
+    /** The sky for the weather layer, read again every fifteen minutes while the screensaver is up. */
+    private void askSky() {
+        if (weatherFx == null || appContext == null) return;
+        long now = System.currentTimeMillis();
+        if (now - skyAsked < 15 * 60_000L) return;
+        skyAsked = now;
+        Context context = appContext;
+        new Thread(() -> Weather.askSky(context), "clock-sky").start();
     }
 
     private void loadWallpaper() {
@@ -211,9 +241,11 @@ final class ClockScene {
         shownMs = 0;
         // The same pick as Home's, so a shuffled collection stays shuffled and wallpaper_moods still
         // decides what may show at this hour.
-        File next = WallpaperRotation.pick(playable(), wallpaperFile.getName(), order, random);
-        if (next.equals(wallpaperFile)) return;   // a mood group of one
+        File next = WallpaperPlayer.pickNext(rotationPrefs, playable(), wallpaperFile.getName(), order, random);
+        if (next == null || next.equals(wallpaperFile)) return;   // a mood group of one
         wallpaperFile = next;
+        // Local: Home picks up from here, so a round of rounds goes on where the screensaver left it.
+        rotationPrefs.edit().putString("image", next.getName()).putLong("changed", System.currentTimeMillis()).apply();
         wallpaperShown = false;
         loadWallpaper();
     }

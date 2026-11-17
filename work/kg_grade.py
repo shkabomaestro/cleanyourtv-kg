@@ -34,7 +34,8 @@ SHOTS = [
     ("v3-noc", "006", "night", 0.50, "Шумарице · Споменик стрељаним ђацима и професорима"),
     ("sumarice-jutro", "008", "morning", 0.55, "Спомен-парк „Крагујевачки октобар“"),
     ("sumarice-dan", "010", "evening", 0.60, "Спомен-парк „Крагујевачки октобар“"),
-    ("sumarice-noc", "007", "night", 0.50, "Спомен-парк „Крагујевачки октобар“"),
+    # sumarice-noc (source 007, the "Not to be forgotten and never repeated" message by the museum) is left out on
+    # purpose: the owner wants cheerful pictures only.
     ("sud-jutro", "011", "morning", 0.40, "Зграда суда · Трг војводе Радомира Путника"),
     ("sud-dan", "013", "evening", 0.45, "Зграда суда"),
     ("zastava-jutro", "014", "morning", 0.40, "Застава · управна зграда са старим сатом"),
@@ -63,6 +64,16 @@ SHOTS = [
     ("moja-skola-odozgo", "own:skola-odozgo.jpg", "plain", 0.50, "ОШ Трећи крагујевачки батаљон"),
     ("moja-kragujevac-iz-vazduha", "own:naselje.jpg", "plain", 0.10, "Крагујевац из ваздуха"),
 ]
+# The cheerful photos work/kg_more.py chose (work/kg-more/index.tsv): number, file, title, author, licence, page,
+# day or night, caption. They are graded like the rest; their source is "more:<file>".
+MORE = ROOT / "work" / "kg-more"
+MORE_INDEX = {}
+if (MORE / "index.tsv").exists():
+    for row in (MORE / "index.tsv").read_text(encoding="utf-8").splitlines():
+        parts = row.split("\t")
+        if len(parts) >= 8:
+            MORE_INDEX[parts[1]] = parts
+            SHOTS.append((parts[1], "more:" + parts[1], "day" if parts[6] == "day" else "night", 0.50, parts[7]))
 # The time of day each look is shown at. "day" has no tint of its own and serves both halves of the day.
 MOODS = {"morning": ["morning"], "evening": ["evening"], "night": ["night"], "dusk": ["night"], "day": ["morning", "evening"],
          "plain": ["morning", "evening"]}
@@ -184,7 +195,11 @@ def main():
     captions, credits, done = [], [], []
     for name, num, look, anchor, caption in SHOTS:
         own = num.startswith("own:")
-        source = ROOT / "work" / "kg-own" / num[4:] if own else SRC / f"{num}.jpg"
+        more = num.startswith("more:")
+        source = ROOT / "work" / "kg-own" / num[4:] if own else MORE / f"{num[5:]}.jpg" if more else SRC / f"{num}.jpg"
+        if more and not source.exists():
+            print(f"{name}: skipped, run work/kg_more.py first")
+            continue
         if own and not source.exists():   # someone else's copy of this repo: the owner's pictures are not in it
             print(f"{name}: skipped, {source.name} is not here")
             continue
@@ -207,7 +222,10 @@ def main():
             done.append((name, im))
             print(f"{name}.jpg  {size // 1024} KB  q{quality}  ({look}, own)")
             continue
-        _, title, artist, licence, url = index[num][:5]
+        if more:
+            _, _, title, artist, licence, url = MORE_INDEX[num[5:]][:6]
+        else:
+            _, title, artist, licence, url = index[num][:5]
         note = "day photo graded to night" if look == "dusk" else "colour graded"
         credits.append(f"| {name}.jpg | [{title[5:]}]({url}) | {artist} | {licence} | {note} |")
         done.append((name, im))

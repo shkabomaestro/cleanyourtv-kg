@@ -21,7 +21,7 @@
   "background_color": "#000000",
   "wallpaper": true,
   "wallpaper_rotation_minutes": 10,
-  "wallpaper_order": "shuffle",
+  "wallpaper_order": "rounds",
   "wallpaper_captions": true,
   "wallpaper_moods": {
     "morning": [
@@ -68,7 +68,6 @@
     "night": [
       "gimnazija-noc.jpg",
       "v3-noc.jpg",
-      "sumarice-noc.jpg",
       "fica-noc.jpg",
       "saborna-noc.jpg",
       "teatar-noc.jpg"
@@ -89,5 +88,8 @@
   "glass_style": "glass",
   "clock_wallpaper": true,
   "clock_wallpaper_dim": 30,
-  "clock_glow": false
+  "clock_glow": false,
+  "locale": "sr-Cyrl-RS",
+  "weather_effects": true,
+  "news_ticker": true
 }

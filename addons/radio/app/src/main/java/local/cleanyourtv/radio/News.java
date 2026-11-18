@@ -95,7 +95,8 @@ final class News {
     static String clean(String raw) {
         String s = raw.replaceAll("(?s)<!\\[CDATA\\[(.*?)]]>", "$1").replaceAll("(?s)<[^>]*>", " ");
         Matcher e = Pattern.compile("&(#x[0-9a-fA-F]+|#[0-9]+|[a-zA-Z]+);").matcher(s);
-        StringBuilder out = new StringBuilder();
+        // StringBuffer, not StringBuilder: Matcher takes a StringBuilder only from Android 14 on (the stick has 10).
+        StringBuffer out = new StringBuffer();
         while (e.find()) {
             String code = e.group(1), with;
             if (code.startsWith("#x")) with = new String(Character.toChars(Integer.parseInt(code.substring(2), 16)));

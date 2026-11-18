@@ -12,6 +12,8 @@
     <!-- Leaves and re-joins the Wi-Fi network when the stream cannot be reached for a while. -->
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <!-- Hears the network come back, to reconnect the station at once. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <!-- Only an app signed with the same key (the launcher built on this PC) may tell the service what to play. -->
     <permission android:name="local.cleanyourtv.radio.PLAY" android:protectionLevel="signature" />

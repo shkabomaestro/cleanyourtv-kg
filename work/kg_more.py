@@ -38,7 +38,7 @@ API = "https://commons.wikimedia.org/w/api.php"
 UA = "cleanyourtv-kg-wallpapers/1.1 (personal TV theme; contact via github.com/shkabomaestro)"
 WANT = 50
 MAX_NIGHT = 8
-PER_SUBJECT = 3
+PER_SUBJECT = 4
 
 ROOT_CATEGORIES = ["Kragujevac", "Views of Kragujevac", "Buildings in Kragujevac", "Streets in Kragujevac",
                    "Parks in Kragujevac", "Churches in Kragujevac", "Squares in Kragujevac", "Kragujevac at night",
@@ -281,7 +281,7 @@ def main():
             continue
         colour, bright, sharp, small = measure(im)
         night = bright < 70
-        if colour < 22 or sharp < 9:   # grey, washed out or soft: not the cheerful look
+        if colour < 18 or sharp < 8:   # grey, washed out or soft: not the cheerful look
             continue
         score = colour + 0.6 * sharp - abs(bright - 125) * 0.25 + (12 if why == "seed" else 0)
         if night:
@@ -317,8 +317,18 @@ def main():
         name = slug(c["title"])
         keep.add(name + ".jpg")
         target = OUT / (name + ".jpg")
+        # wide enough that the 16:9 crop is still 1080 high: a panorama needs more than 2560 px across
+        w, h = c["ii"]["width"], c["ii"]["height"]
+        need = min(w, max(2560, math.ceil(1080 * w / h) + 4))
+        if target.exists():
+            try:
+                with Image.open(target) as old:
+                    if old.height < 1080 or old.width < 1920:
+                        target.unlink()   # fetched too small by an earlier run
+            except Exception:
+                target.unlink()
         if not target.exists() or target.stat().st_size < 50_000:
-            q = api({"action": "query", "titles": c["title"], "prop": "imageinfo", "iiprop": "url", "iiurlwidth": 2560})
+            q = api({"action": "query", "titles": c["title"], "prop": "imageinfo", "iiprop": "url", "iiurlwidth": need})
             try:
                 url = list(q["query"]["pages"].values())[0]["imageinfo"][0]["thumburl"]
             except Exception:

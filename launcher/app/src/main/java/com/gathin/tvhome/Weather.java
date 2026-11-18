@@ -128,10 +128,43 @@ final class Weather {
         }, "weather").start();
     }
 
+    /**
+     * Local addition: the sky in words beside the temperature, from the WMO code ("Облачно", "Слаба киша", "Снег").
+     * Clear is "Сунчано" by day and "Ведро" by night; day is 1, 0, or -1 for "by the hour".
+     */
+    static String describe(int code, int day, int hour) {
+        boolean isDay = day >= 0 ? day == 1 : hour >= 7 && hour < 18;
+        switch (code) {
+            case 0: return isDay ? "Сунчано" : "Ведро";
+            case 1: return isDay ? "Претежно сунчано" : "Претежно ведро";
+            case 2: return "Делимично облачно";
+            case 3: return "Облачно";
+            case 45: case 48: return "Магла";
+            case 51: case 53: case 55: return "Росуља";
+            case 56: case 57: return "Ледена росуља";
+            case 61: return "Слаба киша";
+            case 63: return "Киша";
+            case 65: return "Јака киша";
+            case 66: case 67: return "Ледена киша";
+            case 71: return "Слаб снег";
+            case 73: case 77: return "Снег";
+            case 75: return "Јак снег";
+            case 80: return "Пљусак";
+            case 81: return "Пљускови";
+            case 82: return "Јаки пљускови";
+            case 85: case 86: return "Снежни пљускови";
+            case 95: return "Грмљавина";
+            case 96: case 99: return "Грмљавина са градом";
+            default: return "";
+        }
+    }
+
     private static void show(TextView line, Icon icon, TextView air) {
         line.setVisibility(shown == null ? View.GONE : View.VISIBLE);
-        line.setText(shown);
-        line.setContentDescription(shown == null ? null : shown + ", " + said);
+        Sky now = sky;
+        String words = now == null ? "" : describe(now.code, now.day, java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY));
+        line.setText(shown == null || words.isEmpty() ? shown : shown + "  ·  " + words);
+        line.setContentDescription(shown == null ? null : shown + ", " + (words.isEmpty() ? said : words));
         icon.kind = kind(said);
         icon.invalidateSelf();
         air.setVisibility(aqi < 0 ? View.GONE : View.VISIBLE);

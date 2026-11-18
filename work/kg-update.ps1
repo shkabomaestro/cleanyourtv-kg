@@ -19,6 +19,7 @@ function Check($what) { if ($LASTEXITCODE -ne 0) { throw "$what nije uspelo (kod
 Step 'Povezivanje sa stickom'
 & $adb connect "${TvHost}:5555" | Out-Host
 $state = ''
+$ErrorActionPreference = 'Continue'   # adb javlja "not found" na stderr dok TV ne odgovori: to nije greska skripte
 for ($i = 0; $i -lt 40; $i++) {   # novi racunar: TV pita "Allow USB debugging?" - imas dva minuta da potvrdis
     $state = "$(& $adb -s "${TvHost}:5555" get-state 2>$null)".Trim()
     if ($state -eq 'device') { break }
@@ -26,7 +27,8 @@ for ($i = 0; $i -lt 40; $i++) {   # novi racunar: TV pita "Allow USB debugging?"
     Start-Sleep -Seconds 3
     & $adb connect "${TvHost}:5555" | Out-Null
 }
-if ($state -ne 'device') { throw "Stick ne odgovara kao 'device' (stanje: $state). Ukljuci USB debugging i potvrdi 'Always allow' na TV-u." }
+$ErrorActionPreference = 'Stop'
+if ($state -ne 'device') { throw "Stick na $TvHost ne odgovara (stanje: '$state'). Proveri IP adresu sticka (Settings > Network) i da je USB debugging ukljucen." }
 
 Step '1/4 Radio dodatak (vesti i vreme)'
 Push-Location addons\radio

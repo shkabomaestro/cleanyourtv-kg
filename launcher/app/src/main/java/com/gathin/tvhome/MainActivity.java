@@ -960,6 +960,20 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         } else {
             registerReceiver(packageReceiver, packageFilter);
         }
+        // Local: the TV switched off (the stick stays powered, the screen goes off): the next picture starts a new
+        // random round, so each time the TV comes on the order is a fresh one.
+        if (WallpaperRotation.ORDER_ROUNDS.equals(cfg.wallpaperOrder)) {
+            roundsReceiver = new BroadcastReceiver() {
+                @Override public void onReceive(Context context, Intent intent) {
+                    WallpaperPlayer.newRound(context);
+                }
+            };
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                registerReceiver(roundsReceiver, new IntentFilter(Intent.ACTION_SCREEN_OFF), Context.RECEIVER_NOT_EXPORTED);
+            } else {
+                registerReceiver(roundsReceiver, new IntentFilter(Intent.ACTION_SCREEN_OFF));
+            }
+        }
         if (openOnStartOnWake) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 registerReceiver(wakeReceiver, new IntentFilter(Intent.ACTION_SCREEN_ON), Context.RECEIVER_NOT_EXPORTED);
@@ -1409,6 +1423,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         cancelHoldOk();
         if (gameDay != null) gameDay.shutdown();
         unregisterReceiver(packageReceiver);
+        if (roundsReceiver != null) unregisterReceiver(roundsReceiver);
         if (openOnStartOnWake) unregisterReceiver(wakeReceiver);
         wallpaperPlayer.close();
         ConnectivityManager cm = getSystemService(ConnectivityManager.class);
@@ -3706,6 +3721,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     private WeatherFx weatherFx;
     private NewsTicker newsTicker;
+    private BroadcastReceiver roundsReceiver;
     /** While Home stays up: ask the add-on for headlines again (NewsTicker.refresh skips a question asked too soon). */
     private final Runnable newsTick = new Runnable() {
         @Override public void run() {

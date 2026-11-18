@@ -44,6 +44,15 @@ public class WeatherProvider extends ContentProvider {
 
     @Override
     public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs, String sortOrder) {
+        // Local: a provider that throws takes the whole add-on down with it, the playing radio included. Never.
+        try {
+            return answer(uri);
+        } catch (Throwable e) {
+            return new MatrixCursor(new String[]{"error"});
+        }
+    }
+
+    private Cursor answer(Uri uri) {
         return "/air".equals(uri.getPath()) ? air() : weather();
     }
 

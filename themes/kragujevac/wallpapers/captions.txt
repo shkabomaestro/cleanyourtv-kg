@@ -28,3 +28,40 @@ centar.jpg	Стари центар града
 fontana.jpg	Фонтана у центру града
 ulica.jpg	Центар града у јесен
 krst.jpg	Ђурђевдански крст
+nova-pkic15-urbanisticka-celina-kragujevca-9-2d4d8.jpg	Стари центар града
+nova-pkic15-urbanisticka-celina-kragujevca-10-f218a.jpg	Стари центар града
+nova-urbanisticke-celine-kragujevca-18-07aac.jpg	Стари центар града
+nova-wiki-sumadija-xvi-zgrada-zeleznicke-stan-9b22c.jpg	Крагујевац
+nova-wiki-sumadija-xvi-zgrada-zeleznicke-stan-96732.jpg	Крагујевац
+nova-decja-biblioteka-kragujevac-95ce0.jpg	Крагујевац
+nova-urbanisticke-celine-kragujevca-20-02c52.jpg	Стари центар града
+nova-pkic15-urbanisticka-celina-kragujevca-1-a8259.jpg	Стари центар града
+nova-pkic15-urbanisticka-celina-kragujevca-4-9a0a7.jpg	Стари центар града
+nova-wiki-sumadija-xvi-zgrada-zeleznicke-stan-cb1e8.jpg	Крагујевац
+nova-amidzin-konak-66-4d26d.jpg	Амиџин конак
+nova-kragujevac-002-d58b5.jpg	Крагујевац
+nova-kralja-aleksandra-i-karadjordjevica-krag-4ffe8.jpg	Улица краља Александра I
+nova-rogojevac-kragujevac-03-b03a3.jpg	Крагујевац
+nova-os-svetozar-markovic-kragujevac-07-9f1ac.jpg	Крагујевац
+nova-kompleks-stare-crkve-u-kragujevcu-kod-vt-5104e.jpg	Крагујевац
+nova-masinski-fakultet-kraljevo-2-b93d8.jpg	Крагујевац
+nova-kompleks-stare-crkve-u-kragujevcu-kod-vt-d2ad8.jpg	Крагујевац
+nova-wiki-sumadija-xvi-amidzin-konak-835-57080.jpg	Амиџин конак
+nova-muzej-stara-livnica-11-4b651.jpg	Крагујевац
+nova-wiki-sumadija-xi-stara-crkva-kragujevac--cbd98.jpg	Стара црква
+nova-wiki-sumadija-xvi-regentova-kuca-715-9ac24.jpg	Крагујевац
+nova-os-svetozar-markovic-kragujevac-08-935e3.jpg	Крагујевац
+nova-urbanisticke-celine-kragujevca-06-ba0fc.jpg	Стари центар града
+nova-wiki-sumadija-xvi-bubanj-cesma-u-kraguje-f4f3d.jpg	Језеро Бубањ
+nova-skolsko-dvoriste-1-13476.jpg	Крагујевац
+nova-wiki-sumadija-xi-velike-pcelice-798-1d2a8.jpg	Велике Пчелице
+nova-masinski-fakultet-kraljevo-1-2117c.jpg	Крагујевац
+nova-wiki-sumadija-xvi-vatrogasni-dom-u-kragu-29c6e.jpg	Крагујевац
+nova-knez-mihailov-konak-u-kragujevcu-64-48d95.jpg	Крагујевац
+nova-knez-mihailov-konak-u-kragujevcu-61-f8381.jpg	Крагујевац
+nova-ulaz-na-stari-betonski-pesacki-most-u-kr-c25e9.jpg	Пешачки мост на Лепеници
+nova-amidzin-konak-69-77845.jpg	Амиџин конак
+nova-wiki-sumadija-xvi-vatrogasni-dom-u-kragu-40b0f.jpg	Крагујевац
+moja-kragujevac-iz-vazduha.jpg	Крагујевац из ваздуха
+moja-os-treci-kragujevacki-bataljon.jpg	ОШ Трећи крагујевачки батаљон
+moja-skola-odozgo.jpg	ОШ Трећи крагујевачки батаљон

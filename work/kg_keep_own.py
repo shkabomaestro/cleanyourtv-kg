@@ -29,7 +29,7 @@ def main():
         return
     cfg_path = THEME / "config.json"
     cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
-    moods = cfg.setdefault("wallpaper_moods", {"morning": [], "evening": [], "night": []})
+    moods = cfg.get("wallpaper_moods")   # none: every picture in the folder is in the one round already
     captions_path = WALL / "captions.txt"
     lines = captions_path.read_text(encoding="utf-8").splitlines() if captions_path.exists() else []
     named = {line.split("\t")[0] for line in lines}
@@ -38,7 +38,7 @@ def main():
         if (WALL / picture.name).exists():
             continue   # this computer has the original and kg_grade.py made it
         shutil.copy2(picture, WALL / picture.name)
-        for group in ("morning", "evening"):
+        for group in ("morning", "evening") if moods else ():
             if picture.name not in moods.setdefault(group, []):
                 moods[group].append(picture.name)
         if picture.name not in named:

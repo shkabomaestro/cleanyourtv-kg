@@ -187,8 +187,18 @@ def save(im, path):
 
 
 def main():
-    index = {r[0]: r for r in csv.reader((SRC / "index.tsv").open(encoding="utf-8"), delimiter="\t")}
+    # On a computer without work/kg-hd (the originals of the first pictures), the finished pictures already in the
+    # theme are kept as they are, with their credits, instead of being rebuilt.
+    index_file = SRC / "index.tsv"
+    index = ({r[0]: r for r in csv.reader(index_file.open(encoding="utf-8"), delimiter="\t")}
+             if index_file.exists() else {})
     OUT.mkdir(parents=True, exist_ok=True)
+    finished = {p.name: p.read_bytes() for p in OUT.glob("*.jpg")}
+    old_credits = {}
+    if (THEME / "CREDITS.md").exists():
+        for line in (THEME / "CREDITS.md").read_text(encoding="utf-8").splitlines():
+            if line.startswith("| ") and ".jpg |" in line:
+                old_credits[line[2:line.index(" |")]] = line
     for old in OUT.glob("*.jpg"):
         old.unlink()
     moods = {"morning": [], "evening": [], "night": []}
@@ -197,6 +207,19 @@ def main():
         own = num.startswith("own:")
         more = num.startswith("more:")
         source = ROOT / "work" / "kg-own" / num[4:] if own else MORE / f"{num[5:]}.jpg" if more else SRC / f"{num}.jpg"
+        if not own and not more and (not source.exists() or num not in index):
+            if name + ".jpg" not in finished:
+                print(f"{name}: skipped, neither {source.name} nor a finished picture is here")
+                continue
+            (OUT / f"{name}.jpg").write_bytes(finished[name + ".jpg"])
+            for mood in MOODS[look]:
+                moods[mood].append(f"{name}.jpg")
+            captions.append(f"{name}.jpg\t{caption}")
+            if name + ".jpg" in old_credits:
+                credits.append(old_credits[name + ".jpg"])
+            done.append((name, Image.open(OUT / f"{name}.jpg").convert("RGB")))
+            print(f"{name}.jpg  kept as it was (no original on this computer)")
+            continue
         if more and not source.exists():
             print(f"{name}: skipped, run work/kg_more.py first")
             continue
@@ -206,7 +229,8 @@ def main():
         im = Image.open(source).convert("RGB")
         im = crop_16_9(im, anchor)
         if not own and (im.width < SIZE[0] or im.height < SIZE[1]):   # never enlarge a Commons photo: the owner wants real 1080p
-            raise SystemExit(f"{name}: source {num} gives only {im.width}x{im.height} after the 16:9 crop")
+            print(f"{name}: skipped, {im.width}x{im.height} after the 16:9 crop is less than 1920x1080")
+            continue
         enlarged = im.width < SIZE[0]
         if enlarged:   # sharpen the small detail before it is spread over more pixels, then once more at full size
             im = im.resize((1440, 810), Image.LANCZOS).filter(ImageFilter.UnsharpMask(radius=1.0, percent=60, threshold=1))
@@ -238,7 +262,9 @@ def main():
         "| File | Original | Author | Licence | Change |", "|---|---|---|---|---|", *credits]) + "\n", encoding="utf-8")
     cfg_path = THEME / "config.json"
     cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
-    cfg["wallpaper_moods"] = moods
+    # One round over every picture, day and night alike: the owner wants each shown once before any comes back
+    # (wallpaper_order "rounds"), and a night group of seven came round every hour. MOODS still sorts the looks.
+    cfg.pop("wallpaper_moods", None)
     cfg_path.write_text(json.dumps(cfg, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     W, H, cols = 640, 360, 3

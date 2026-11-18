@@ -157,5 +157,5 @@
     <string name="sound_my_music">Моја музика</string>
     <string name="sound_off">Радио искључен</string>
     <string name="air_quality">Ваздух %1$d AQI</string>
-    <string name="news_ticker_label">ВЕСТИ</string>
+    <string name="news_ticker_label">БОШКОВЕ ВЕСТИ</string>
 </resources>

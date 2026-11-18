@@ -5,7 +5,10 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.media.AudioManager;
+import android.net.ConnectivityManager;
+import android.net.Network;
 import android.net.wifi.WifiManager;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -25,10 +28,18 @@ import androidx.media3.exoplayer.ExoPlayer;
  * Plays the station the launcher's sound line names (extras "name" and "url"), until another app takes the
  * sound (YouTube, Netflix) or the launcher stops the service. The launcher asks again each time Home comes up.
  * ExoPlayer, not the system MediaPlayer: this stick's own player refuses AAC+ streams (Radio Kragujevac).
+ *
+ * Local: it never stays silent. A dropped or stalled stream is opened again at once (then after 1, 2 and up to 4
+ * seconds while it keeps failing); a stream that hangs without an error (buffering, or playing with the position
+ * standing still) counts as dropped after ten seconds; the network coming back reconnects at once; and if Android
+ * stops the add-on, it starts it again with the last station (START_STICKY).
  */
 public class RadioService extends Service implements AudioManager.OnAudioFocusChangeListener, Player.Listener {
     static final String NAME = "name", URL = "url";
-    private static final long RETRY_MS = 5000;
+    /** Waits between attempts while a station keeps failing: the first at once, the last repeated. */
+    private static final long[] RETRY_MS = {300, 1000, 2000, 4000};
+    /** How long a stream may hang (buffering, or the position standing still) before it is opened again. */
+    private static final long STALL_MS = 10_000, WATCH_MS = 1000;
     private static final long LINK_CHECK_MS = 5_000, AFTER_RENEW_MS = 30_000;
 
     private final Handler main = new Handler(Looper.getMainLooper());
@@ -37,20 +48,33 @@ public class RadioService extends Service implements AudioManager.OnAudioFocusCh
     private ExoPlayer player;
     private WifiManager.WifiLock wifiLock;
     private String url;
+    private int failures;
+    private long lastPosition = -1, progressAt;
+    private ConnectivityManager.NetworkCallback networkCallback;
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        String wanted = intent == null ? null : intent.getStringExtra(URL);
+        SharedPreferences last = getSharedPreferences("radio", MODE_PRIVATE);
+        // intent null: Android restarted the add-on after stopping it; play the last station again
+        String wanted = intent == null ? last.getString(URL, null) : intent.getStringExtra(URL);
+        String name = intent == null ? last.getString(NAME, null) : intent.getStringExtra(NAME);
         getSystemService(NotificationManager.class).createNotificationChannel(
                 new NotificationChannel("radio", getString(R.string.app_name), NotificationManager.IMPORTANCE_LOW));
         startForeground(1, new Notification.Builder(this, "radio").setSmallIcon(R.drawable.icon)
-                .setContentTitle(intent == null ? null : intent.getStringExtra(NAME)).build());
-        if (wanted == null || !(wanted.startsWith("http://") || wanted.startsWith("https://"))) {
+                .setContentTitle(name).build());
+        // Restarted by Android while something else plays (YouTube, Netflix): leave the sound to it.
+        boolean othersPlaying = intent == null && player == null && getSystemService(AudioManager.class).isMusicActive();
+        if (othersPlaying || wanted == null || !(wanted.startsWith("http://") || wanted.startsWith("https://"))) {
             stopSelf();
             return START_NOT_STICKY;
         }
-        if (wanted.equals(url) && player != null) return START_NOT_STICKY;   // Home asking again for what is on air
+        if (wanted.equals(url) && player != null) {   // Home asking again for what is on air
+            if (!player.isPlaying() && player.getPlaybackState() != Player.STATE_BUFFERING) reconnectNow();
+            return START_STICKY;
+        }
         url = wanted;
+        last.edit().putString(URL, wanted).putString(NAME, name).apply();
+        failures = 0;
         getSystemService(AudioManager.class).requestAudioFocus(this, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN);
         if (wifiLock == null) {
             // What a streaming app is expected to hold: keeps the Wi-Fi chip out of power save while a station plays.
@@ -60,9 +84,48 @@ public class RadioService extends Service implements AudioManager.OnAudioFocusCh
             linkThread.start();
             link = new Handler(linkThread.getLooper());
             link.postDelayed(this::checkLink, LINK_CHECK_MS);
+            watchNetwork();
         }
         connect();
-        return START_NOT_STICKY;
+        return START_STICKY;
+    }
+
+    /** The network back (Wi-Fi rejoined, router restarted): reconnect at once instead of waiting for an error. */
+    private void watchNetwork() {
+        networkCallback = new ConnectivityManager.NetworkCallback() {
+            @Override
+            public void onAvailable(Network network) {
+                main.post(() -> {
+                    if (player != null && !player.isPlaying()) reconnectNow();
+                });
+            }
+        };
+        try {
+            getSystemService(ConnectivityManager.class).registerDefaultNetworkCallback(networkCallback);
+        } catch (RuntimeException e) {
+            networkCallback = null;   // the stall watch still catches a dead stream
+        }
+    }
+
+    /** Once a second: a stream that hangs with no error is opened again after STALL_MS. */
+    private void watch() {
+        if (player == null || url == null) return;
+        long now = android.os.SystemClock.elapsedRealtime();
+        long position = player.getCurrentPosition();
+        if (player.isPlaying() && position != lastPosition) {
+            lastPosition = position;
+            progressAt = now;
+            failures = 0;   // sound is coming: the next drop retries at once again
+        } else if (now - progressAt > STALL_MS) {
+            reconnectNow();
+            return;
+        }
+        main.postDelayed(this::watch, WATCH_MS);
+    }
+
+    private void reconnectNow() {
+        main.removeCallbacksAndMessages(null);
+        connect();
     }
 
     /** (Re)opens the stream. */
@@ -76,15 +139,20 @@ public class RadioService extends Service implements AudioManager.OnAudioFocusCh
                     .build()).build();
             player.addListener(this);
         }
+        player.stop();   // a fresh connection, not a resume of the broken one
         player.setMediaItem(MediaItem.fromUri(url));
         player.prepare();
         player.play();
+        lastPosition = -1;
+        progressAt = android.os.SystemClock.elapsedRealtime();
+        main.postDelayed(this::watch, WATCH_MS);
     }
 
-    /** The stream dropped or would not open: try again shortly. */
+    /** The stream dropped or would not open: at once, then a little later each time it keeps failing. */
     private void retry() {
         main.removeCallbacksAndMessages(null);
-        main.postDelayed(this::connect, RETRY_MS);
+        main.postDelayed(this::connect, RETRY_MS[Math.min(failures, RETRY_MS.length - 1)]);
+        failures++;
     }
 
     /**
@@ -137,6 +205,13 @@ public class RadioService extends Service implements AudioManager.OnAudioFocusCh
     @Override
     public void onDestroy() {
         main.removeCallbacksAndMessages(null);
+        if (networkCallback != null) {
+            try {
+                getSystemService(ConnectivityManager.class).unregisterNetworkCallback(networkCallback);
+            } catch (RuntimeException ignored) {
+                // already gone
+            }
+        }
         if (player != null) player.release();
         if (wifiLock != null) {
             wifiLock.release();

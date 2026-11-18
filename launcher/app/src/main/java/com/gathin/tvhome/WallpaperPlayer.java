@@ -82,6 +82,12 @@ final class WallpaperPlayer {
             preferences.edit().putString("collection", collection)
                     .remove("image").remove("changed").remove("played").apply();
         }
+        // Local: with "rounds", every start of the stick begins a new random round (MainActivity does the same
+        // when the TV is switched off and the stick stays powered).
+        long bootAt = System.currentTimeMillis() - android.os.SystemClock.elapsedRealtime();
+        if (WallpaperRotation.ORDER_ROUNDS.equals(order) && Math.abs(bootAt - preferences.getLong("boot", 0)) > 120_000) {
+            preferences.edit().putLong("boot", bootAt).remove("image").remove("changed").remove("played").apply();
+        }
         DisplayMetrics metrics = context.getResources().getDisplayMetrics();
         width = metrics.widthPixels;
         height = metrics.heightPixels;
@@ -146,6 +152,12 @@ final class WallpaperPlayer {
         File picked = WallpaperRotation.unplayed(playable, played, previous, random);
         preferences.edit().putString("played", WallpaperRotation.played(played)).apply();
         return picked;
+    }
+
+    /** A new random round from the next picture on (local: the TV was switched off). */
+    static void newRound(Context context) {
+        context.getSharedPreferences("wallpaper_rotation", Context.MODE_PRIVATE).edit()
+                .remove("image").remove("changed").remove("played").apply();
     }
 
     /** Where a layer that belongs right above the picture goes among root's children (local: WeatherFx). */

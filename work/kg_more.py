@@ -12,7 +12,7 @@ What it does, in order:
   3. downloads a 640 px preview of each and scores it: colourful and bright first, sharp, not grey; near-identical
      shots (the same building from the same spot) and more than three of one subject are left out;
   4. keeps the best 50 (up to eight colourful night shots among them, for the night group), downloads them at
-     2560 px into work/kg-more/, and writes work/kg-more/index.tsv and the overview work/kragujevac-nove.jpg.
+     1920 px (3840 for a panorama) into work/kg-more/, and writes work/kg-more/index.tsv and the overview work/kragujevac-nove.jpg.
 
 Don't like one? Put its number from the overview (or its Commons title) on a line of work/kg-more-skip.txt and run
 this again: it picks another in its place. Then work/kg_grade.py grades them with the rest of the theme.
@@ -91,16 +91,17 @@ def wanted(name):
     return not any(w in f for w in NOT_WANTED)
 
 
-def curl(url, binary=False):
-    for attempt in range(4):
+def curl(url, binary=False, tries=4):
+    for attempt in range(tries):
         try:
-            data = subprocess.run(["curl", "-sSL", "--fail", "-A", UA, url], check=True, capture_output=True,
-                                  timeout=120).stdout
+            data = subprocess.run(["curl", "-sSL", "--fail", "--connect-timeout", "10", "--max-time", "60", "-A", UA,
+                                   url], check=True, capture_output=True, timeout=70).stdout
             if data:
                 return data if binary else json.loads(data)
         except Exception:
             pass
-        time.sleep(3 * (attempt + 1))
+        if attempt + 1 < tries:
+            time.sleep(3 * (attempt + 1))
     return b"" if binary else {}
 
 
@@ -321,54 +322,83 @@ def main():
     return choose_and_fetch(scored)
 
 
+def fetch(c):
+    """One chosen photo at full size into work/kg-more; True when it is there. Tries the 1920 (or 3840) px copy, then the
+    original. Runs in parallel with the others."""
+    name = slug(c["title"])
+    target = OUT / (name + ".jpg")
+    if target.exists():
+        try:
+            with Image.open(target) as old:
+                if old.height >= 1080 and old.width >= 1920:
+                    return True
+        except Exception:
+            pass
+        target.unlink()
+    # Commons only serves thumbnails at its standard widths (1920, 3840...); another width is refused, which is
+    # what made the old downloads fail and retry. 1920 is enough unless a panorama's 16:9 crop needs more.
+    w, h = c["ii"]["width"], c["ii"]["height"]
+    width = 1920 if w * 9 <= h * 16 or 1080 * w / h <= 1920 else 3840
+    urls = []
+    if w > width:
+        q = api({"action": "query", "titles": c["title"], "prop": "imageinfo", "iiprop": "url", "iiurlwidth": width})
+        try:
+            urls.append(list(q["query"]["pages"].values())[0]["imageinfo"][0]["thumburl"])
+        except Exception:
+            pass
+    urls.append(c["ii"]["url"])   # the original: always there, only bigger
+    for url in urls:
+        data = curl(url, binary=True, tries=2)
+        if len(data) < 50_000:
+            continue
+        try:
+            im = Image.open(BytesIO(data))
+            if im.width > 4000:   # an original far bigger than needed: keep a 3840 copy, not 20 MB
+                im = im.convert("RGB")
+                im.thumbnail((3840, 3840), Image.LANCZOS)
+                im.save(target, quality=92)
+            else:
+                target.write_bytes(data)
+            return True
+        except Exception:
+            continue
+    return False
+
+
 def choose_and_fetch(scored):
+    from concurrent.futures import ThreadPoolExecutor
     scored.sort(key=lambda c: -c["score"])
-    chosen, per_subject, nights = [], {}, 0
-    for c in scored:
-        if len(chosen) >= WANT:
+    picked, per_subject, nights = [], {}, 0
+    for c in scored:   # in score order, with some to spare for downloads that fail
+        if len(picked) >= WANT + 20:
             break
         if per_subject.get(c["subject"], 0) >= PER_SUBJECT:
             continue
         if c["night"] and nights >= MAX_NIGHT:
             continue
-        if any(bin(c["hash"] ^ k["hash"]).count("1") <= 10 for k in chosen):
+        if any(bin(c["hash"] ^ k["hash"]).count("1") <= 10 for k in picked):
             continue
-        chosen.append(c)
+        picked.append(c)
         per_subject[c["subject"]] = per_subject.get(c["subject"], 0) + 1
         nights += c["night"]
-    print(f"Chose {len(chosen)} ({nights} at night). Downloading them at 2560 px...")
-
+    print(f"Downloading the best {len(picked)} (six at a time)...")
+    with ThreadPoolExecutor(6) as pool:
+        ok = list(pool.map(fetch, picked))
+    chosen = [c for c, good in zip(picked, ok) if good][:WANT]
+    failed = [c["title"] for c, good in zip(picked, ok) if not good]
+    if failed:   # never offered again
+        with open(HERE / "kg-more-skip.txt", "a", encoding="utf-8") as f:
+            f.writelines(t + "\n" for t in failed)
+        print(f"  {len(failed)} would not download; others took their place")
     keep = set()
     rows = []
-    for i, c in enumerate(chosen, 1):
+    for c in chosen:
         name = slug(c["title"])
         keep.add(name + ".jpg")
-        target = OUT / (name + ".jpg")
-        # wide enough that the 16:9 crop is still 1080 high: a panorama needs more than 2560 px across
-        w, h = c["ii"]["width"], c["ii"]["height"]
-        need = min(w, max(2560, math.ceil(1080 * w / h) + 4))
-        if target.exists():
-            try:
-                with Image.open(target) as old:
-                    if old.height < 1080 or old.width < 1920:
-                        target.unlink()   # fetched too small by an earlier run
-            except Exception:
-                target.unlink()
-        if not target.exists() or target.stat().st_size < 50_000:
-            q = api({"action": "query", "titles": c["title"], "prop": "imageinfo", "iiprop": "url", "iiurlwidth": need})
-            try:
-                url = list(q["query"]["pages"].values())[0]["imageinfo"][0]["thumburl"]
-            except Exception:
-                url = c["ii"]["url"]
-            data = curl(url, binary=True)
-            if len(data) < 50_000:
-                print(f"  {c['title']}: download failed, skipped")
-                continue
-            target.write_bytes(data)
         meta = c["ii"].get("extmetadata", {})
         artist = re.sub(r"\s+", " ", re.sub("<[^>]+>", "", meta.get("Artist", {}).get("value", ""))).strip()
         licence = meta.get("LicenseShortName", {}).get("value", "?")
-        rows.append([f"{i:02d}", name, c["title"], artist, licence, c["ii"]["descriptionurl"],
+        rows.append([f"{len(rows) + 1:02d}", name, c["title"], artist, licence, c["ii"]["descriptionurl"],
                      "night" if c["night"] else "day", caption(c["title"]), f"{c['colour']:.0f}", f"{c['bright']:.0f}"])
     for old in OUT.glob("nova-*.jpg"):   # pictures a skip replaced
         if old.name not in keep:

@@ -4,7 +4,8 @@
 # 3. nove slike: trazi, pa ti pokaze pregled i pita koje ne zelis, dok ne kazes da je u redu
 # 4. napravi i instalira radio dodatak i launcher, posalje temu   5. slika ekrana sa TV-a i provera
 # 6. sacuva kljuc za potpis (za stari racunar)   7. posalje sve na tvoj GitHub fork
-param([Parameter(Mandatory = $true)][string]$TvHost, [switch]$SkipPhotos)
+# -Continue: nastavi prekinut rad (preskace 1 i 2, slike bira iz vec nadjenih, bez ponovnog trazenja)
+param([Parameter(Mandatory = $true)][string]$TvHost, [switch]$SkipPhotos, [switch]$Continue)
 $ErrorActionPreference = 'Stop'
 Set-Location (Split-Path $PSScriptRoot -Parent)
 $py = 'tools\venv\Scripts\python.exe'
@@ -14,6 +15,7 @@ function Step($text) { Write-Host "`n=== $text ===" -ForegroundColor Cyan }
 function Check($what) { if ($LASTEXITCODE -ne 0) { throw "$what nije uspelo (kod $LASTEXITCODE)" } }
 if (-not (git config user.name)) { git config user.name 'Bosko'; git config user.email 'bosko@localhost' }
 
+if (-not $Continue) {
 Step '1/7 Cuvanje tvog trenutnog stanja'
 git add -A
 git diff --cached --quiet
@@ -30,6 +32,7 @@ git add -A
 git diff --cached --quiet
 if ($LASTEXITCODE -ne 0) { git commit -q -m 'Claude: utakmice Zvezde, kurs, istorija, prognoza, pesma na radiju, radio se sam vraca'; Check 'Cuvanje izmena' }
 Write-Host 'Ubaceno.'
+}
 
 Step 'Povezivanje sa stickom'
 & $adb connect "${TvHost}:5555" | Out-Host
@@ -42,8 +45,10 @@ $ErrorActionPreference = 'Stop'
 if ("$(& $adb -s "${TvHost}:5555" get-state)".Trim() -ne 'device') { throw "Stick na $TvHost ne odgovara. Proveri IP na TV-u (Settings > Network)." }
 
 if (-not $SkipPhotos) {
-    Step '3/7 Nove slike (prvi put 30-40 minuta)'
-    & $py -I work\kg_more.py; Check 'Trazenje slika'
+    Step '3/7 Nove slike'
+    if ($Continue -and (Test-Path work\kg-more\candidates.json)) { & $py -I work\kg_more.py --reuse }
+    else { & $py -I work\kg_more.py }
+    Check 'Trazenje slika'
     while ($true) {
         Start-Process (Resolve-Path work\kragujevac-nove.jpg)
         $answer = Read-Host 'Otvoren je pregled. Brojevi slika koje NE zelis (npr. 3,17,22), ili samo Enter ako je sve u redu'

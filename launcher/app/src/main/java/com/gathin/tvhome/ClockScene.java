@@ -180,7 +180,35 @@ final class ClockScene {
         if (now - skyAsked < 15 * 60_000L) return;
         skyAsked = now;
         Context context = appContext;
-        new Thread(() -> Weather.askSky(context), "clock-sky").start();
+        new Thread(() -> {
+            Weather.askSky(context);
+            String days = Weather.forecast(context);
+            content.post(() -> showForecast(days));
+        }, "clock-sky").start();
+    }
+
+    private android.widget.TextView forecastLine;
+
+    /** Local: the next three days under the date, quiet like the date; hidden without a forecast. */
+    private void showForecast(String days) {
+        if (forecastLine == null) {
+            if (!(content instanceof android.widget.LinearLayout)) return;
+            Context ctx = content.getContext();
+            float dp = ctx.getResources().getDisplayMetrics().density;
+            forecastLine = new android.widget.TextView(ctx);
+            forecastLine.setTextSize(16);
+            forecastLine.setTextColor(0xB3FFFFFF);
+            forecastLine.setLetterSpacing(0.04f);
+            forecastLine.setSingleLine(true);
+            forecastLine.setShadowLayer(6 * dp, 0, dp, 0xCC000000);
+            android.widget.LinearLayout.LayoutParams lp = new android.widget.LinearLayout.LayoutParams(
+                    android.view.ViewGroup.LayoutParams.WRAP_CONTENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
+            lp.setMarginStart((int) (6 * dp));
+            lp.topMargin = (int) (14 * dp);
+            ((android.widget.LinearLayout) content).addView(forecastLine, lp);
+        }
+        forecastLine.setText(days);
+        forecastLine.setVisibility(days == null ? View.GONE : View.VISIBLE);
     }
 
     private void loadWallpaper() {

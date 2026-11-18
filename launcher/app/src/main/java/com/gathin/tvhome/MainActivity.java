@@ -1174,6 +1174,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             root.removeCallbacks(newsTick);
             newsTick.run();
         }
+        if (btnSound != null) {
+            root.removeCallbacks(songTick);
+            root.postDelayed(songTick, 3000);
+        }
         handler.postDelayed(minuteTick, MINUTE_MS);
         if (festive && lamp != null) {
             lamp.start();
@@ -1353,6 +1357,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (weatherFx != null) weatherFx.stop();
         if (newsTicker != null) newsTicker.stop();
         root.removeCallbacks(newsTick);
+        root.removeCallbacks(songTick);
         stopAmbientAnimation();
         hero.animate().cancel();
         ambient.animate().cancel();
@@ -3757,6 +3762,37 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private TextView btnSound;
     private RadioIcon radioIcon;
     private String soundSource;
+    /** What the station plays now ("Artist - Title"), from the radio add-on; null when it does not say. */
+    private String song;
+    /** Every fifteen seconds while Home is up and a station plays: ask the add-on for the song. */
+    private final Runnable songTick = new Runnable() {
+        @Override public void run() {
+            String source = soundSource;
+            boolean station = source != null && !HomeMusic.MUSIC.equals(source) && !HomeMusic.OFF.equals(source);
+            if (station) {
+                new Thread(() -> {
+                    String title = null;
+                    try (android.database.Cursor row = getContentResolver().query(
+                            android.net.Uri.parse("content://local.cleanyourtv.radio.news/song"), null, null, null, null)) {
+                        if (row != null && row.moveToFirst()) title = row.getString(0);
+                    } catch (RuntimeException e) {
+                        // an older add-on, or none
+                    }
+                    String found = title;
+                    runOnUiThread(() -> {
+                        if (!java.util.Objects.equals(found, song)) {
+                            song = found;
+                            if (btnSound != null) showSound();
+                        }
+                    });
+                }, "song").start();
+            } else if (song != null) {
+                song = null;
+                showSound();
+            }
+            root.postDelayed(this, 15_000);
+        }
+    };
     private final Runnable applySound = () -> HomeMusic.select(this, soundSource);
 
     /** "Listening: ..." above the top bar's buttons, reached with Up from them; Left and Right change the source. */
@@ -3767,6 +3803,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         btnSound = new TextView(this);
         btnSound.setTextSize(13);
         btnSound.setSingleLine(true);
+        btnSound.setMaxWidth((int) (620 * density));   // a long song title ends in "…" instead of running off
+        btnSound.setEllipsize(android.text.TextUtils.TruncateAt.END);
         btnSound.setGravity(Gravity.CENTER_VERTICAL);
         btnSound.setCompoundDrawables(radioIcon, null, null, null);
         btnSound.setCompoundDrawablePadding((int) (8 * density));
@@ -3802,6 +3840,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         List<String> sources = soundSources();
         int at = Math.max(0, sources.indexOf(soundSource));
         soundSource = sources.get((at + step + sources.size()) % sources.size());
+        song = null;   // the next station's song comes with its stream
         NavSounds.move();
         showSound();
         root.removeCallbacks(applySound);
@@ -3813,6 +3852,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         boolean focused = btnSound.isFocused();
         String text = HomeMusic.OFF.equals(soundSource) ? getString(R.string.sound_off) : getString(R.string.sound_listening,
                 HomeMusic.MUSIC.equals(soundSource) ? getString(R.string.sound_my_music) : soundSource);
+        // Local: the song the station plays, while it is unfocused (focused, the pill is for changing the source)
+        if (!focused && song != null && !song.isEmpty() && !HomeMusic.MUSIC.equals(soundSource)
+                && !HomeMusic.OFF.equals(soundSource)) {
+            text = text + "  ·  ♪ " + song;
+        }
         btnSound.setText(focused ? "‹   " + text + "   ›" : text);
         btnSound.setBackgroundResource(focused ? R.drawable.pill_bg : 0);
         int pad = (int) (12 * density);

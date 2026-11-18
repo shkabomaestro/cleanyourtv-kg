@@ -250,6 +250,8 @@ def main():
             line = line.strip()
             if line:
                 skip.add(old_index.get(line.zfill(2), old_index.get(line, line)))
+        # numbers only mean something against this overview: keep the titles, so the next run reads them right
+        skip_file.write_text("".join(t + "\n" for t in sorted(skip) if t.startswith("File:")), encoding="utf-8")
     # the theme's own pictures: never offer the same shot again
     known_hashes = []
     for p in sorted((HERE / "kg-hd").glob("*.jpg")):
@@ -257,6 +259,21 @@ def main():
             known_hashes.append(dhash(Image.open(p)))
         except Exception:
             pass
+
+    cache = OUT / "candidates.json"
+    if "--reuse" in sys.argv and cache.exists():
+        # The last search and its scores, kept: a skip only needs a new choice, not another half hour on Commons.
+        scored = []
+        for c in json.loads(cache.read_text(encoding="utf-8")):
+            if c["title"] in used or c["title"] in skip:
+                continue
+            prev = OUT / "prev" / (hashlib.sha1(c["title"].encode()).hexdigest()[:12] + ".jpg")
+            if not prev.exists():
+                continue
+            c["small"] = Image.open(prev).convert("RGB")
+            scored.append(c)
+        print(f"Reusing the last search: {len(scored)} candidates")
+        return choose_and_fetch(scored)
 
     print("Looking on Wikimedia Commons...")
     found = collect()
@@ -295,6 +312,16 @@ def main():
             print(f"  {n}/{len(cands)}")
         time.sleep(0.2)
 
+    (OUT / "prev").mkdir(exist_ok=True)
+    keep_cache = []
+    for c in scored:
+        c["small"].save(OUT / "prev" / (hashlib.sha1(c["title"].encode()).hexdigest()[:12] + ".jpg"), quality=80)
+        keep_cache.append({k: v for k, v in c.items() if k != "small"})
+    cache.write_text(json.dumps(keep_cache, ensure_ascii=False), encoding="utf-8")
+    return choose_and_fetch(scored)
+
+
+def choose_and_fetch(scored):
     scored.sort(key=lambda c: -c["score"])
     chosen, per_subject, nights = [], {}, 0
     for c in scored:

@@ -36,6 +36,8 @@ import androidx.media3.exoplayer.ExoPlayer;
  */
 public class RadioService extends Service implements AudioManager.OnAudioFocusChangeListener, Player.Listener {
     static final String NAME = "name", URL = "url";
+    /** "Artist - Title" as the station sends it (ICY metadata), for the launcher's sound line; null when unknown. */
+    static volatile String nowPlaying;
     /** Waits between attempts while a station keeps failing: the first at once, the last repeated. */
     private static final long[] RETRY_MS = {300, 1000, 2000, 4000};
     /** How long a stream may hang (buffering, or the position standing still) before it is opened again. */
@@ -49,6 +51,7 @@ public class RadioService extends Service implements AudioManager.OnAudioFocusCh
     private WifiManager.WifiLock wifiLock;
     private String url;
     private int failures;
+    private String lastUrl;
     private long lastPosition = -1, progressAt;
     private ConnectivityManager.NetworkCallback networkCallback;
 
@@ -140,6 +143,8 @@ public class RadioService extends Service implements AudioManager.OnAudioFocusCh
             player.addListener(this);
         }
         player.stop();   // a fresh connection, not a resume of the broken one
+        if (!url.equals(lastUrl)) nowPlaying = null;   // another station: its own song comes with its stream
+        lastUrl = url;
         player.setMediaItem(MediaItem.fromUri(url));
         player.prepare();
         player.play();
@@ -188,6 +193,17 @@ public class RadioService extends Service implements AudioManager.OnAudioFocusCh
     }
 
     @Override
+    public void onMetadata(androidx.media3.common.Metadata metadata) {
+        for (int i = 0; i < metadata.length(); i++) {
+            androidx.media3.common.Metadata.Entry entry = metadata.get(i);
+            if (entry instanceof androidx.media3.extractor.metadata.icy.IcyInfo) {
+                String title = ((androidx.media3.extractor.metadata.icy.IcyInfo) entry).title;
+                nowPlaying = title == null ? null : title.trim();
+            }
+        }
+    }
+
+    @Override
     public void onPlayerError(PlaybackException error) {
         retry();
     }
@@ -205,6 +221,7 @@ public class RadioService extends Service implements AudioManager.OnAudioFocusCh
     @Override
     public void onDestroy() {
         main.removeCallbacksAndMessages(null);
+        nowPlaying = null;
         if (networkCallback != null) {
             try {
                 getSystemService(ConnectivityManager.class).unregisterNetworkCallback(networkCallback);

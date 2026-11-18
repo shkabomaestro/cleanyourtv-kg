@@ -159,6 +159,32 @@ final class Weather {
         }
     }
 
+    private static final String[] WEEKDAYS = {"Нед", "Пон", "Уто", "Сре", "Чет", "Пет", "Суб"};
+
+    /**
+     * Local: the next three days for the screensaver, "Сутра  Киша  9° / 2°     Чет  Облачно  11° / 4°  ...";
+     * null without the add-on or a forecast. Call off the main thread.
+     */
+    static String forecast(android.content.Context context) {
+        StringBuilder out = new StringBuilder();
+        try (Cursor rows = context.getContentResolver().query(Uri.parse(PROVIDER + "days"), null, null, null, null)) {
+            int n = 0;
+            while (rows != null && rows.moveToNext()) {
+                if (n++ == 0) continue;   // today: the clock's own weather line covers it
+                if (n > 4) break;
+                java.time.LocalDate day = java.time.LocalDate.parse(rows.getString(0));
+                String name = n == 2 ? "Сутра" : WEEKDAYS[day.getDayOfWeek().getValue() % 7];
+                String words = describe(rows.getInt(1), 1, 12);
+                if (out.length() > 0) out.append("     ");
+                out.append(name).append("  ").append(words.isEmpty() ? "" : words + "  ")
+                        .append(Math.round(rows.getDouble(2))).append("° / ").append(Math.round(rows.getDouble(3))).append('°');
+            }
+        } catch (RuntimeException e) {
+            return null;
+        }
+        return out.length() == 0 ? null : out.toString();
+    }
+
     private static void show(TextView line, Icon icon, TextView air) {
         line.setVisibility(shown == null ? View.GONE : View.VISIBLE);
         Sky now = sky;

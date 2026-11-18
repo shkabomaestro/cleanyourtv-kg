@@ -49,6 +49,12 @@ public class NewsProvider extends ContentProvider {
     }
 
     private Cursor answer(Uri uri) {
+        if ("/song".equals(uri.getPath())) {   // what the radio plays now, when the station says (RadioService)
+            MatrixCursor song = new MatrixCursor(new String[]{"title"});
+            String title = RadioService.nowPlaying;
+            if (title != null && !title.isEmpty()) song.addRow(new Object[]{title});
+            return song;
+        }
         SharedPreferences saved = getContext().getSharedPreferences("news", 0);
         long now = System.currentTimeMillis();
         if (now - saved.getLong("at", 0) >= 10 * MINUTE && now - saved.getLong("tried", 0) >= 3 * MINUTE) {
@@ -56,6 +62,8 @@ public class NewsProvider extends ContentProvider {
             refresh(saved, now);
         }
         MatrixCursor rows = new MatrixCursor(new String[]{"title", "source", "sport", "at"});
+        // Local: first Zvezda's game, the exchange rate and a line of Kragujevac history (Ticker), then the headlines.
+        for (String[] line : extras(saved, now)) rows.addRow(new Object[]{line[0], line[1], Integer.parseInt(line[2]), now});
         if (now - saved.getLong("at", 0) < 12 * HOUR) {
             try {
                 JSONArray items = new JSONArray(saved.getString("items", "[]"));
@@ -68,6 +76,49 @@ public class NewsProvider extends ContentProvider {
             }
         }
         return rows;
+    }
+
+    /**
+     * The lines before the headlines, each read again only when due: Zvezda's games every minute while one is on or
+     * about to start, otherwise every half hour; the exchange rate every three hours. A failed read keeps the last one.
+     */
+    private static synchronized List<String[]> extras(SharedPreferences saved, long now) {
+        List<String[]> out = new ArrayList<>();
+        try {
+            long gamesDue = saved.getLong("games_due", 0);
+            if (now >= gamesDue) {
+                String json = get(Ticker.gamesUrl(now));
+                List<Ticker.Game> games = Ticker.games(json);
+                long next = now + 30 * MINUTE;
+                for (Ticker.Game g : games) {
+                    boolean soon = !g.played && g.start - now < 20 * MINUTE && now - g.start < 3 * HOUR;
+                    if (soon) next = now + MINUTE;
+                }
+                SharedPreferences.Editor e = saved.edit().putLong("games_due", games.isEmpty() && json.isEmpty() ? now + 5 * MINUTE : next);
+                if (!json.isEmpty()) e.putString("games", json);
+                e.apply();
+            }
+            String[] zvezda = Ticker.zvezda(Ticker.games(saved.getString("games", "")), now);
+            if (zvezda != null) out.add(new String[]{zvezda[0], "Евролига", zvezda[1]});
+        } catch (Exception e) {
+            // no game line this time
+        }
+        try {
+            if (now - saved.getLong("rates_at", 0) > 3 * HOUR) {
+                double eur = Ticker.middle(get(Ticker.EUR)), usd = Ticker.middle(get(Ticker.USD));
+                if (eur > 0 || usd > 0) {
+                    saved.edit().putLong("rates_at", now).putFloat("eur", (float) eur).putFloat("usd", (float) usd).apply();
+                } else {
+                    saved.edit().putLong("rates_at", now - 3 * HOUR + 10 * MINUTE).apply();   // try again in ten minutes
+                }
+            }
+            String rates = Ticker.rates(saved.getFloat("eur", 0), saved.getFloat("usd", 0));
+            if (rates != null) out.add(new String[]{rates, "НБС", String.valueOf(Ticker.INFO)});
+        } catch (Exception e) {
+            // no rate line this time
+        }
+        out.add(new String[]{Ticker.history(now), "Крагујевац", String.valueOf(Ticker.INFO)});
+        return out;
     }
 
     /** One lock: two asks at once (Home and the screensaver) read the sites once. */
@@ -104,7 +155,8 @@ public class NewsProvider extends ContentProvider {
             http.setConnectTimeout(6000);
             http.setReadTimeout(8000);
             http.setRequestProperty("User-Agent", AGENT);
-            http.setRequestProperty("Accept", "application/rss+xml, application/xml, text/xml, */*");
+            http.setRequestProperty("Accept", address.contains("rss") ? "application/rss+xml, application/xml, text/xml, */*"
+                    : "application/json, */*");
             if (http.getResponseCode() != 200) return "";
             ByteArrayOutputStream body = new ByteArrayOutputStream();
             try (InputStream in = http.getInputStream()) {

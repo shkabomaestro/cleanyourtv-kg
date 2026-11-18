@@ -31,7 +31,8 @@ public class WeatherProvider extends ContentProvider {
     private static final long MINUTE = 60_000, HOUR = 60 * MINUTE;
     /** Kragujevac's centre. Another town: its latitude and longitude. Answers {"current":{"temperature_2m":17.6,"weather_code":3,...}}. */
     private static final String FEED = "https://api.open-meteo.com/v1/forecast?latitude=44.01&longitude=20.91"
-            + "&current=temperature_2m,weather_code,is_day,precipitation,cloud_cover,wind_speed_10m";
+            + "&current=temperature_2m,weather_code,is_day,precipitation,cloud_cover,wind_speed_10m"
+            + "&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=Europe%2FBelgrade&forecast_days=4";
     /** IQAir's API, the place as its site names it (iqair.com/serbia/central-serbia/kragujevac); the key follows. */
     private static final String AIR = "https://api.airvisual.com/v2/city?city=Kragujevac&state=Central%20Serbia&country=Serbia&key=";
     /** The owner's own IQAir key, one line, pushed over adb into this app's files folder. Without it: no air row. */
@@ -53,7 +54,27 @@ public class WeatherProvider extends ContentProvider {
     }
 
     private Cursor answer(Uri uri) {
+        if ("/days".equals(uri.getPath())) return days();
         return "/air".equals(uri.getPath()) ? air() : weather();
+    }
+
+    /** Local: the next days for the screensaver, one row each {day (yyyy-MM-dd), code, max, min}, today first. */
+    private Cursor days() {
+        weather().close();   // reads the forecast too when it is due
+        SharedPreferences saved = getContext().getSharedPreferences("weather", 0);
+        MatrixCursor rows = new MatrixCursor(new String[]{"day", "code", "max", "min"});
+        if (System.currentTimeMillis() - saved.getLong("at", 0) > 6 * HOUR) return rows;
+        try {
+            JSONObject daily = new JSONObject(saved.getString("daily", "{}"));
+            org.json.JSONArray day = daily.getJSONArray("time"), code = daily.getJSONArray("weather_code"),
+                    max = daily.getJSONArray("temperature_2m_max"), min = daily.getJSONArray("temperature_2m_min");
+            for (int i = 0; i < day.length(); i++) {
+                rows.addRow(new Object[]{day.getString(i), code.getInt(i), max.getDouble(i), min.getDouble(i)});
+            }
+        } catch (Exception e) {
+            // no forecast kept yet
+        }
+        return rows;
     }
 
     private Cursor weather() {
@@ -62,7 +83,10 @@ public class WeatherProvider extends ContentProvider {
         // Fifteen minutes, not the launcher's twenty: a reading taken a second after one ask must be old enough at the next.
         if (due(saved, now, 15 * MINUTE, 5 * MINUTE)) {
             try {
-                JSONObject current = new JSONObject(get(FEED)).getJSONObject("current");
+                JSONObject answer = new JSONObject(get(FEED));
+                JSONObject current = answer.getJSONObject("current");
+                JSONObject daily = answer.optJSONObject("daily");
+                if (daily != null) saved.edit().putString("daily", daily.toString()).apply();
                 int code = current.getInt("weather_code");   // WMO: 0-1 clear, 2-48 cloud and fog, 51 and up precipitation
                 saved.edit().putString("temperature", String.valueOf(current.getDouble("temperature_2m")))
                         // the words the launcher's Weather.kind() sorts into its three icons

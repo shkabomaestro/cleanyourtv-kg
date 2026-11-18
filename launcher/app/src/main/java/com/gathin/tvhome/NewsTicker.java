@@ -27,19 +27,27 @@ import java.util.List;
 final class NewsTicker extends View {
     private static final String PROVIDER = "content://local.cleanyourtv.radio.news/now";
     private static final long ASK_EVERY_MS = 10 * 60_000;
-    private static final int SPORT = 0xFFFFC21A, NEWS = 0xFF64B5F6, BADGE = 0xFFD32F2F, BACK_TOP = 0xE6111622, BACK_BOTTOM = 0xF2070A11;
+    private static final int SPORT = 0xFFFFC21A, NEWS = 0xFF64B5F6, LIVE = 0xFFFF3B30, INFO = 0xFF66BB6A, BADGE = 0xFFD32F2F, BACK_TOP = 0xE6111622, BACK_BOTTOM = 0xF2070A11;
 
     /** One headline as the add-on sends it. */
     static final class Line {
         final String title, source;
-        final boolean sport;
+        /** 0 news, 1 sport, 2 a game on now, 3 an information line (exchange rate, history, a result). */
+        final int kind;
 
-        Line(String title, String source, boolean sport) {
+        Line(String title, String source, int kind) {
             this.title = title;
             this.source = source;
-            this.sport = sport;
+            this.kind = kind;
+        }
+
+        int colour() {
+            return kind == 1 ? SPORT : kind == 2 ? LIVE : kind == 3 ? INFO : NEWS;
         }
     }
+
+    /** While a game is on the ticker asks every minute, for the score. */
+    private static boolean live;
 
     /** The last list, kept across a rebuilt Home so the ticker comes back at once. */
     private static List<Line> kept = Collections.emptyList();
@@ -90,28 +98,38 @@ final class NewsTicker extends View {
     /** Asks the add-on in the background (at most every ten minutes, or at once with force) and shows what it gives. */
     void refresh(Activity activity, boolean force) {
         long now = System.currentTimeMillis();
-        if (!force && now - asked < ASK_EVERY_MS) return;
+        if (!force && now - asked < (live ? 60_000 : ASK_EVERY_MS)) return;
         asked = now;
         new Thread(() -> {
             List<Line> read = new ArrayList<>();
             try (Cursor row = activity.getContentResolver().query(Uri.parse(PROVIDER), null, null, null, null)) {
                 while (row != null && row.moveToNext() && read.size() < 40) {
                     String t = row.getString(0);
-                    if (t != null && !t.trim().isEmpty()) read.add(new Line(t.trim(), row.getString(1), row.getInt(2) == 1));
+                    if (t != null && !t.trim().isEmpty()) read.add(new Line(t.trim(), row.getString(1), row.getInt(2)));
                 }
             } catch (RuntimeException e) {
                 return;   // no add-on, an older one without the news, or another signing key: keep what is shown
             }
             if (read.isEmpty()) return;
+            boolean nowLive = false;
+            for (Line l : read) if (l.kind == 2) nowLive = true;
+            live = nowLive;
             activity.runOnUiThread(() -> {
                 kept = read;
+                // a score changes mid-loop: take it at once; anything else after the running list has gone round
                 if (lines.isEmpty()) setLines(read);
-                else next = read;   // after the running list has gone round
+                else if (live) setLines(read, true);   // the new score in place, without starting the loop over
+                else next = read;
             });
         }, "news").start();
     }
 
     private void setLines(List<Line> list) {
+        setLines(list, false);
+    }
+
+    private void setLines(List<Line> list, boolean keepPlace) {
+        float place = offset;
         lines = list;
         next = null;
         titleWidths = new float[list.size()];
@@ -122,7 +140,7 @@ final class NewsTicker extends View {
             sourceWidths[i] = list.get(i).source == null ? 0 : source.measureText(list.get(i).source);
             loop += segment(i);
         }
-        offset = 0;
+        offset = keepPlace && loop > 0 ? place % loop : 0;
         setVisibility(list.isEmpty() ? GONE : VISIBLE);
         invalidate();
     }
@@ -184,7 +202,7 @@ final class NewsTicker extends View {
                 float width = segment(i);
                 if (x + width > left) {
                     Line line = lines.get(i);
-                    dot.setColor(line.sport ? SPORT : NEWS);
+                    dot.setColor(line.colour());
                     canvas.drawCircle(x + 3.5f * dp, h / 2f, 3.5f * dp, dot);
                     float tx = x + 7 * dp + 9 * dp;
                     canvas.drawText(line.title, tx, baseline, title);

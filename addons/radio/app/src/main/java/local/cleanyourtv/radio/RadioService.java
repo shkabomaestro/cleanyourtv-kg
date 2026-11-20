@@ -42,7 +42,9 @@ public class RadioService extends Service implements AudioManager.OnAudioFocusCh
     private static final long[] RETRY_MS = {300, 1000, 2000, 4000};
     /** How long a stream may hang (buffering, or the position standing still) before it is opened again. */
     private static final long STALL_MS = 10_000, WATCH_MS = 1000;
-    private static final long LINK_CHECK_MS = 5_000, AFTER_RENEW_MS = 30_000;
+    private static final long LINK_CHECK_MS = 5_000;
+    /** After each renew in a row, a longer wait before the next: a network that stays bad is not bounced every 30 s. */
+    private static final long[] AFTER_RENEW_MS = {30_000, 60_000, 120_000, 300_000};
 
     private final Handler main = new Handler(Looper.getMainLooper());
     private final HandlerThread linkThread = new HandlerThread("link");
@@ -51,6 +53,7 @@ public class RadioService extends Service implements AudioManager.OnAudioFocusCh
     private WifiManager.WifiLock wifiLock;
     private String url;
     private int failures;
+    private int renews;   // Wi-Fi renews in a row, on the link thread
     private String lastUrl;
     private long lastPosition = -1, progressAt;
     private ConnectivityManager.NetworkCallback networkCallback;
@@ -161,22 +164,33 @@ public class RadioService extends Service implements AudioManager.OnAudioFocusCh
     }
 
     /**
-     * Every five seconds, on its own thread: does the router still answer? On this stick (MiTV-AESP0 on a phone
-     * hotspot) the link goes dead for minutes while Android still shows it connected: no disconnect event and no
-     * packets either way, so nothing ever reconnects. When the router stays silent, the stick leaves the Wi-Fi
-     * network and joins again, which is what switching Wi-Fi off and on by hand does; Android then picks the best
-     * saved network in range. Only the router is asked, so a station or an internet outage never bounces Wi-Fi.
+     * Every five seconds, on its own thread: is the link alive? On this stick (MiTV-AESP0 on a phone hotspot) the link
+     * goes dead for minutes while Android still shows it connected: no disconnect event and no packets either way, so
+     * nothing ever reconnects. When neither the router nor the internet answers, the stick leaves the Wi-Fi network and
+     * joins again, which is what switching Wi-Fi off and on by hand does; Android then picks the best saved network in
+     * range.
+     *
+     * The router alone is not enough: a guest network, or a router that ignores pings, never answers one while the
+     * internet works fine, and asking only the router bounced such a network every 40 seconds (a stick at an office,
+     * November 2026: it hopped between the guest network and a phone hotspot all evening). And a network that stays
+     * dead after a renew is renewed again later and later, not every 30 seconds.
      */
     @SuppressWarnings("deprecation")   // getDhcpInfo, disconnect and reconnect: the last two only work below targetSdk 29
     private void checkLink() {
         WifiManager wifi = getApplicationContext().getSystemService(WifiManager.class);
         int gateway = wifi.getDhcpInfo().gateway;   // 0 while not connected: Android is already reconnecting
-        boolean dead = gateway != 0 && !answers(gateway);
+        boolean dead = gateway != 0 && !answers(gateway) && !internet();
+        long wait = LINK_CHECK_MS;
         if (dead) {
+            android.util.Log.i("radio", "Wi-Fi link dead (router and internet silent): renewing, " + (renews + 1) + " in a row");
             wifi.disconnect();
             wifi.reconnect();
+            wait = AFTER_RENEW_MS[Math.min(renews, AFTER_RENEW_MS.length - 1)];
+            renews++;
+        } else if (gateway != 0) {
+            renews = 0;
         }
-        link.postDelayed(this::checkLink, dead ? AFTER_RENEW_MS : LINK_CHECK_MS);
+        link.postDelayed(this::checkLink, wait);
     }
 
     /** Three tries of 1.5 s: a live link on a busy hotspot loses the odd ping, a dead one loses them all. */
@@ -187,6 +201,19 @@ public class RadioService extends Service implements AudioManager.OnAudioFocusCh
                 if (InetAddress.getByAddress(ip).isReachable(1500)) return true;
             } catch (IOException e) {
                 // counts as a silent try
+            }
+        }
+        return false;
+    }
+
+    /** A TCP connection to a public DNS server, two of them, 2 s each: the internet through this link answers. */
+    private static boolean internet() {
+        for (String host : new String[] {"1.1.1.1", "8.8.8.8"}) {
+            try (java.net.Socket socket = new java.net.Socket()) {
+                socket.connect(new java.net.InetSocketAddress(host, 53), 2000);
+                return true;
+            } catch (IOException e) {
+                // the next one
             }
         }
         return false;

@@ -3802,9 +3802,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         radioIcon.setBounds(0, 0, radioIcon.getIntrinsicWidth(), radioIcon.getIntrinsicHeight());
         btnSound = new TextView(this);
         btnSound.setTextSize(13);
-        btnSound.setSingleLine(true);
+        btnSound.setMaxLines(2);   // "Listening: <station>", and under it what the station says is playing
         btnSound.setMaxWidth((int) (620 * density));   // a long song title ends in "…" instead of running off
         btnSound.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        btnSound.setMinHeight((int) (30 * density));
         btnSound.setGravity(Gravity.CENTER_VERTICAL);
         btnSound.setCompoundDrawables(radioIcon, null, null, null);
         btnSound.setCompoundDrawablePadding((int) (8 * density));
@@ -3820,8 +3821,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             return true;
         });
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
-                (int) (30 * density), Gravity.TOP | Gravity.END);
-        lp.topMargin = (int) (16 * density);   // over the top bar's buttons, clear of the picture and its caption
+                ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP | Gravity.END);
+        lp.topMargin = (int) (12 * density);   // over the top bar's buttons, clear of the picture and its caption
         lp.setMarginEnd((int) (56 * density));
         root.addView(btnSound, lp);
         showSound();
@@ -3852,12 +3853,16 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         boolean focused = btnSound.isFocused();
         String text = HomeMusic.OFF.equals(soundSource) ? getString(R.string.sound_off) : getString(R.string.sound_listening,
                 HomeMusic.MUSIC.equals(soundSource) ? getString(R.string.sound_my_music) : soundSource);
-        // Local: the song the station plays, while it is unfocused (focused, the pill is for changing the source)
-        if (!focused && song != null && !song.isEmpty() && !HomeMusic.MUSIC.equals(soundSource)
+        // Local: on a second line, the song (or whatever else the station sends) while unfocused; focused, the
+        // pill is one line for changing the source
+        if (!focused && song != null && !song.trim().isEmpty() && !HomeMusic.MUSIC.equals(soundSource)
                 && !HomeMusic.OFF.equals(soundSource)) {
-            text = text + "  ·  ♪ " + song;
+            android.text.SpannableString two = new android.text.SpannableString(text + "\n♪ " + song.trim());
+            two.setSpan(new android.text.style.RelativeSizeSpan(0.92f), text.length() + 1, two.length(), 0);
+            btnSound.setText(two);
+        } else {
+            btnSound.setText(focused ? "‹   " + text + "   ›" : text);
         }
-        btnSound.setText(focused ? "‹   " + text + "   ›" : text);
         btnSound.setBackgroundResource(focused ? R.drawable.pill_bg : 0);
         int pad = (int) (12 * density);
         btnSound.setPadding(pad, 0, pad, 0);

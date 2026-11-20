@@ -26,7 +26,7 @@ Step '2/7 Claude-ove izmene'
 $bundle = Join-Path $downloads 'claude.bundle'
 if (-not (Test-Path $bundle)) { throw "Nema $bundle. Skini claude.bundle u Downloads." }
 git fetch -q $bundle "+kragujevac:refs/heads/claude-izmene"; Check 'Citanje claude.bundle'
-git checkout claude-izmene -- launcher addons/radio work/kg_more.py work/kg_grade.py work/kg_keep_own.py work/kg-update.ps1 work/kg-novi-racunar.ps1 work/uradi-sve.ps1 tools/manage.py tests themes/README.md
+git checkout claude-izmene -- launcher addons/radio work/kg_more.py work/kg_grade.py work/kg_keep_own.py work/kg-update.ps1 work/kg-novi-racunar.ps1 work/uradi-sve.ps1 work/mreza.ps1 tools/manage.py tests themes/README.md
 Check 'Ubacivanje izmena'
 git add -A
 git diff --cached --quiet

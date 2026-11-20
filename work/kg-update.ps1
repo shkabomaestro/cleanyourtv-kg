@@ -35,6 +35,9 @@ Push-Location addons\radio
 .\gradlew.bat --no-daemon assembleRelease; Check 'Build radio dodatka'
 Pop-Location
 & $adb -s "${TvHost}:5555" install -r addons\radio\app\build\outputs\apk\release\app-release.apk | Out-Host; Check 'Instalacija radio dodatka'
+# Za izbor najjace mreze: dozvola za lokaciju (samo tako Android pokazuje mreze u dometu), lokacija ukljucena,
+# i bez ogranicenja koliko cesto sme da trazi mreze
+& $adb -s "${TvHost}:5555" shell 'pm grant local.cleanyourtv.radio android.permission.ACCESS_FINE_LOCATION; pm grant local.cleanyourtv.radio android.permission.ACCESS_COARSE_LOCATION; settings put secure location_mode 3; settings put global wifi_scan_throttle_enabled 0; echo "Lokacija (3 = ukljucena): $(settings get secure location_mode)"' | Out-Host
 
 if (-not $SkipPhotos) {
     Step '2/4 Pedeset novih fotografija (Wikimedia Commons, nekoliko minuta)'

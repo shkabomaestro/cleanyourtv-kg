@@ -54,6 +54,8 @@ public class RadioService extends Service implements AudioManager.OnAudioFocusCh
     private String url;
     private int failures;
     private int renews;   // Wi-Fi renews in a row, on the link thread
+    private int offline;  // checks in a row where the router answers but the internet does not
+    private final WifiChooser chooser = new WifiChooser();
     private String lastUrl;
     private long lastPosition = -1, progressAt;
     private ConnectivityManager.NetworkCallback networkCallback;
@@ -179,16 +181,30 @@ public class RadioService extends Service implements AudioManager.OnAudioFocusCh
     private void checkLink() {
         WifiManager wifi = getApplicationContext().getSystemService(WifiManager.class);
         int gateway = wifi.getDhcpInfo().gateway;   // 0 while not connected: Android is already reconnecting
-        boolean dead = gateway != 0 && !answers(gateway) && !internet();
         long wait = LINK_CHECK_MS;
-        if (dead) {
+        boolean router = gateway == 0 || answers(gateway);
+        // Silent router: ask the internet itself. Router fine: Android's own check of the internet is enough.
+        boolean online = gateway != 0 && (router ? validated() : internet());
+        if (gateway != 0 && !router && !online) {
             android.util.Log.i("radio", "Wi-Fi link dead (router and internet silent): renewing, " + (renews + 1) + " in a row");
-            wifi.disconnect();
-            wifi.reconnect();
+            chooser.avoidCurrent(wifi);   // and if another saved network is in range, it is the one to join
+            if (!chooser.switchToBest(wifi, true)) {
+                wifi.disconnect();
+                wifi.reconnect();
+            }
             wait = AFTER_RENEW_MS[Math.min(renews, AFTER_RENEW_MS.length - 1)];
             renews++;
+            offline = 0;
         } else if (gateway != 0) {
             renews = 0;
+            // Joined but no internet (a guest network's sign-in page, a hotspot out of data): after 20 s, move on.
+            offline = online ? 0 : offline + 1;
+            if (offline >= 4) {
+                chooser.avoidCurrent(wifi);
+                if (chooser.switchToBest(wifi, true)) offline = 0;
+            } else {
+                chooser.switchToBest(wifi, false);   // the strongest saved network in range, when clearly stronger
+            }
         }
         link.postDelayed(this::checkLink, wait);
     }
@@ -204,6 +220,17 @@ public class RadioService extends Service implements AudioManager.OnAudioFocusCh
             }
         }
         return false;
+    }
+
+    /** Android found the internet through the network it uses now (its own check, redone when that network changes). */
+    private boolean validated() {
+        try {
+            ConnectivityManager connectivity = getSystemService(ConnectivityManager.class);
+            android.net.NetworkCapabilities caps = connectivity.getNetworkCapabilities(connectivity.getActiveNetwork());
+            return caps == null || caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED);
+        } catch (RuntimeException e) {
+            return true;   // cannot tell: never a reason to move
+        }
     }
 
     /** A TCP connection to a public DNS server, two of them, 2 s each: the internet through this link answers. */

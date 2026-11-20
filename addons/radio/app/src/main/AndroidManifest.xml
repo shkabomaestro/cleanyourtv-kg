@@ -12,6 +12,10 @@
     <!-- Leaves and re-joins the Wi-Fi network when the stream cannot be reached for a while. -->
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <!-- Sees the saved Wi-Fi networks in range, to keep the stick on the strongest (Android shows them only to an app
+         with the location permission, and only while location is on). Granted by work/kg-update.ps1. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <!-- Hears the network come back, to reconnect the station at once. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 

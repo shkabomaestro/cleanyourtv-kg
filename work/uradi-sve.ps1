@@ -28,9 +28,12 @@ if (-not (Test-Path $bundle)) { throw "Nema $bundle. Skini claude.bundle u Downl
 git fetch -q $bundle "+kragujevac:refs/heads/claude-izmene"; Check 'Citanje claude.bundle'
 git checkout claude-izmene -- launcher addons/radio work/kg_more.py work/kg_grade.py work/kg_keep_own.py work/kg-update.ps1 work/kg-novi-racunar.ps1 work/uradi-sve.ps1 work/mreza.ps1 tools/manage.py tests themes/README.md
 Check 'Ubacivanje izmena'
+# Tvoja tema ostaje tvoja (ime, slike); dodaje se samo panel sa utakmicama Zvezde ispod sata (game_day).
+& $py -I -c "import json,io;p='themes/kragujevac/config.json';c=json.load(io.open(p,encoding='utf-8'));c.setdefault('game_day','local.cleanyourtv.radio');io.open(p,'w',encoding='utf-8',newline='\n').write(json.dumps(c,ensure_ascii=False,indent=2)+'\n')"
+Check 'Tema: utakmice Zvezde'
 git add -A
 git diff --cached --quiet
-if ($LASTEXITCODE -ne 0) { git commit -q -m 'Claude: utakmice Zvezde, kurs, istorija, prognoza, pesma na radiju, radio se sam vraca'; Check 'Cuvanje izmena' }
+if ($LASTEXITCODE -ne 0) { git commit -q -m 'Claude: utakmice Zvezde ispod sata, najjaca Wi-Fi mreza, vesti levo'; Check 'Cuvanje izmena' }
 Write-Host 'Ubaceno.'
 }
 

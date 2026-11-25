@@ -97,6 +97,15 @@ final class NewsTicker extends View {
         setLines(kept);
     }
 
+    /** The red label's left edge and width on screen, for a card that sits right above it (ZvezdaCard). */
+    float labelLeft() {
+        return BADGE_START_DP * dp;
+    }
+
+    float labelWidth() {
+        return badgeWidth - 12 * dp;
+    }
+
     /** Asks the add-on in the background (at most every ten minutes, or at once with force) and shows what it gives. */
     void refresh(Activity activity, boolean force) {
         long now = System.currentTimeMillis();

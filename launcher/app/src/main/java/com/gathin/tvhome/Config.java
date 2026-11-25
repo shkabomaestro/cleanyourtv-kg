@@ -812,17 +812,19 @@ final class Config {
                 Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState()));
     }
 
-    /** Local addition (Extras): {weather_effects, news_ticker}, config.xml's defaults overridden by the theme. */
+    /** Local addition (Extras): {weather_effects, news_ticker, zvezda_card}, config.xml's defaults overridden by the theme. */
     static boolean[] liveExtras(Context ctx) {
         Resources res = ctx.getResources();
         boolean weatherEffects = res.getBoolean(R.bool.weather_effects);
         boolean newsTicker = res.getBoolean(R.bool.news_ticker);
+        boolean zvezdaCard = res.getBoolean(R.bool.zvezda_card);
         JSONObject json = overlay(ctx);
         if (json != null) {
             weatherEffects = bool(json, "weather_effects", weatherEffects);
             newsTicker = bool(json, "news_ticker", newsTicker);
+            zvezdaCard = bool(json, "zvezda_card", zvezdaCard);
         }
-        return new boolean[]{weatherEffects, newsTicker};
+        return new boolean[]{weatherEffects, newsTicker, zvezdaCard};
     }
 
     /** Reads and parses the overlay; any problem means "no overlay", never a crash on the home screen. */

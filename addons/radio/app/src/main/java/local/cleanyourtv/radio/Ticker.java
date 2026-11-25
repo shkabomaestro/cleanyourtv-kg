@@ -90,6 +90,26 @@ final class Ticker {
         return out;
     }
 
+    /** Zvezda's crest as the feed links it (imageUrls.crest), or null. */
+    static String crestUrl(String json) {
+        try {
+            JSONArray data = new JSONObject(json).optJSONArray("data");
+            for (int i = 0; data != null && i < data.length(); i++) {
+                JSONObject g = data.getJSONObject(i);
+                for (String side : new String[] {"home", "away"}) {
+                    JSONObject t = g.optJSONObject(side);
+                    if (t == null || !isZvezda(t)) continue;
+                    JSONObject images = t.optJSONObject("imageUrls");
+                    String url = images == null ? "" : images.optString("crest", "");
+                    if (url.startsWith("https://")) return url;
+                }
+            }
+        } catch (Exception e) {
+            // no crest from this answer
+        }
+        return null;
+    }
+
     /** The team itself, or the club inside it in the older shape. */
     private static JSONObject team(JSONObject side) {
         JSONObject c = side.optJSONObject("club");

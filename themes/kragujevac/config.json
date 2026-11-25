@@ -42,5 +42,6 @@
   "locale": "sr-Cyrl-RS",
   "weather_effects": true,
   "news_ticker": true,
-  "game_day": "local.cleanyourtv.radio"
+  "game_day": "",
+  "zvezda_card": true
 }

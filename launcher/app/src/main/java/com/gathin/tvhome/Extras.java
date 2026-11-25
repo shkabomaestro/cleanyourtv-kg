@@ -5,7 +5,8 @@ import android.content.Context;
 /**
  * Local addition: the fork's own switches, from the theme's config.json with their defaults in config.xml
  * (Config.liveExtras). weather_effects draws the weather outside over the picture (WeatherFx), news_ticker runs the
- * headlines along the bottom of Home (NewsTicker). Both need the radio add-on, which reads the network for them.
+ * headlines along the bottom of Home (NewsTicker), zvezda_card shows Zvezda's next games on a card above the
+ * ticker's label (ZvezdaCard). All need the radio add-on, which reads the network for them.
  */
 final class Extras {
     private Extras() {
@@ -19,11 +20,15 @@ final class Extras {
         return read(context)[1];
     }
 
+    static boolean zvezdaCard(Context context) {
+        return read(context)[2];
+    }
+
     private static boolean[] read(Context context) {
         try {
             return Config.liveExtras(context);
         } catch (RuntimeException e) {
-            return new boolean[]{false, false};   // an unreadable theme: both off
+            return new boolean[]{false, false, false};   // an unreadable theme: all off
         }
     }
 }

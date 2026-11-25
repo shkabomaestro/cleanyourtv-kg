@@ -127,14 +127,27 @@ final class Zvezda {
      * Суперлига"; on the day "данас" or "вечерас"; while on "УЖИВО 1:0 · ...".
      */
     static String[] line(Game g, boolean football, long now) {
+        String[] p = parts(g, football, now);
+        if (p == null) return null;
+        String competition = p[2].isEmpty() ? "" : " · " + p[2];
+        return new String[]{p[0] + " · " + p[1] + competition, p[3]};
+    }
+
+    /**
+     * The pieces of a game's line, for the card on Home that lays them out on three rows: {when, teams, competition,
+     * state}, or null when there is no game within two weeks. when: "чет 3.12. 18:45", "сутра 21:00", "данас",
+     * "УЖИВО 61:58".
+     */
+    static String[] parts(Game g, boolean football, long now) {
         if (g == null) return null;
         String home = football ? footballClub(g.home) : basketballClub(g.home);
         String away = football ? footballClub(g.away) : basketballClub(g.away);
-        String tail = home + " – " + away + competition(g.competition, football);
+        String teams = home + " – " + away;
+        String comp = competitionName(g.competition, football);
         boolean on = g.live || (g.start <= now && now - g.start < PLAYING_MS);
         if (on) {
             String score = g.homeScore >= 0 && g.awayScore >= 0 ? " " + g.homeScore + ":" + g.awayScore : "";
-            return new String[]{"УЖИВО" + score + " · " + tail, String.valueOf(LIVE)};
+            return new String[]{"УЖИВО" + score, teams, comp, String.valueOf(LIVE)};
         }
         if (g.start - now > AHEAD_MS) return null;
         Calendar c = Calendar.getInstance(Ticker.BELGRADE);
@@ -142,21 +155,15 @@ final class Zvezda {
         Calendar today = Calendar.getInstance(Ticker.BELGRADE);
         today.setTimeInMillis(now);
         int days = (int) Math.round((midnight(c) - midnight(today)) / 86_400_000.0);
+        String date = String.format(Locale.ROOT, "%s %d.%d.", DAYS[c.get(Calendar.DAY_OF_WEEK) - 1],
+                c.get(Calendar.DAY_OF_MONTH), c.get(Calendar.MONTH) + 1);
         String when;
-        if (days == 0) when = c.get(Calendar.HOUR_OF_DAY) < 17 ? "данас" : "вечерас";
+        if (days == 0) when = c.get(Calendar.HOUR_OF_DAY) < 17 || !g.timeKnown ? "данас" : "вечерас";
         else if (days == 1) when = "сутра";
-        else if (days < 7) when = DAYS[c.get(Calendar.DAY_OF_WEEK) - 1];
-        else when = String.format(Locale.ROOT, "%s %d.%d.", DAYS[c.get(Calendar.DAY_OF_WEEK) - 1],
-                    c.get(Calendar.DAY_OF_MONTH), c.get(Calendar.MONTH) + 1);
-        if (!g.timeKnown) {   // the day is set, the hour not yet
-            if (days == 0 || days == 1) when = days == 0 ? "данас" : "сутра";
-            else when = String.format(Locale.ROOT, "%s %d.%d.", DAYS[c.get(Calendar.DAY_OF_WEEK) - 1],
-                    c.get(Calendar.DAY_OF_MONTH), c.get(Calendar.MONTH) + 1);
-            return new String[]{when + " · " + tail, String.valueOf(days == 0 ? TODAY : LATER)};
-        }
-        String text = String.format(Locale.ROOT, "%s %02d:%02d · %s", when, c.get(Calendar.HOUR_OF_DAY),
-                c.get(Calendar.MINUTE), tail);
-        return new String[]{text, String.valueOf(days == 0 ? TODAY : LATER)};
+        else if (days < 7 && g.timeKnown) when = DAYS[c.get(Calendar.DAY_OF_WEEK) - 1];
+        else when = date;
+        if (g.timeKnown) when += String.format(Locale.ROOT, " %02d:%02d", c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE));
+        return new String[]{when, teams, comp, String.valueOf(days == 0 ? TODAY : LATER)};
     }
 
     private static long midnight(Calendar c) {
@@ -168,7 +175,13 @@ final class Zvezda {
         return m.getTimeInMillis();
     }
 
-    /** " · Суперлига": competitions as Serbian papers name them, empty when Sofascore gives none. */
+    /** "Суперлига": competitions as Serbian papers name them, empty when the source gives none. */
+    static String competitionName(String name, boolean football) {
+        String c = competition(name, football);
+        return c.startsWith(" · ") ? c.substring(3) : c;
+    }
+
+    /** " · Суперлига", or empty. */
     static String competition(String name, boolean football) {
         String f = News.fold(name);
         if (f.isEmpty()) return "";

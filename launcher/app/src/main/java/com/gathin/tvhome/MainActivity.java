@@ -1169,6 +1169,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         sky.update();
         wallpaperPlayer.start();
         if (weatherFx != null) weatherFx.start();
+        if (zvezdaCard != null) zvezdaCard.start();
         if (newsTicker != null) {
             newsTicker.start();
             root.removeCallbacks(newsTick);
@@ -1356,6 +1357,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         wallpaperPlayer.stop();
         if (weatherFx != null) weatherFx.stop();
         if (newsTicker != null) newsTicker.stop();
+        if (zvezdaCard != null) zvezdaCard.stop();
         root.removeCallbacks(newsTick);
         root.removeCallbacks(songTick);
         stopAmbientAnimation();
@@ -3755,7 +3757,24 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             content.setPadding(content.getPaddingLeft(), content.getPaddingTop(), content.getPaddingRight(),
                     content.getPaddingBottom() + height);
         }
+        if (Extras.zvezdaCard(this)) {
+            // Right above the ticker's red label and as wide, in the strip between the dock and the ticker; the dock
+            // moves up a little so the card never touches it.
+            int cardHeight = (int) (52 * density), gap = (int) (5 * density);
+            int below = newsTicker != null ? (int) (38 * density) : 0;
+            int width = newsTicker != null ? (int) newsTicker.labelWidth() : (int) (160 * density);
+            zvezdaCard = new ZvezdaCard(this);
+            FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(width, cardHeight, Gravity.BOTTOM | Gravity.START);
+            lp.leftMargin = newsTicker != null ? (int) newsTicker.labelLeft() : (int) (20 * density);
+            lp.bottomMargin = below + gap;
+            root.addView(zvezdaCard, lp);
+            View content = (View) findViewById(R.id.leftBlock).getParent().getParent();
+            content.setPadding(content.getPaddingLeft(), content.getPaddingTop(), content.getPaddingRight(),
+                    content.getPaddingBottom() + (int) (12 * density));
+        }
     }
+
+    private ZvezdaCard zvezdaCard;
 
     // ---- local addition: the sound line under the wallpaper's name (HomeMusic) --------------------
 

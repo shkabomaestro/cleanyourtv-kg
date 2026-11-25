@@ -570,4 +570,7 @@
          "weather_effects", "news_ticker"). -->
     <bool name="weather_effects">false</bool>
     <bool name="news_ticker">false</bool>
+    <!-- Local addition: Zvezda's next football and basketball games on a card above the ticker's label (ZvezdaCard),
+         from the radio add-on. A theme turns it on (config.json "zvezda_card"). -->
+    <bool name="zvezda_card">false</bool>
 </resources>

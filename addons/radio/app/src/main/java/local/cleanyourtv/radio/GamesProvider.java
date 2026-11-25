@@ -20,7 +20,11 @@ import android.os.Looper;
  */
 public class GamesProvider extends ContentProvider {
     private static final long MINUTE = 60_000, HOUR = 60 * MINUTE;
-    private static final String[] COLUMNS = {"top_line", "word", "start_ms", "end_ms", "colour", "calendar", "turn_seconds"};
+    /** The game_day contract's columns, then this add-on's own for the card above the ticker (ZvezdaCard). */
+    private static final String[] COLUMNS = {"top_line", "word", "start_ms", "end_ms", "colour", "calendar", "turn_seconds",
+            "sport", "when_text", "teams", "competition", "state"};
+    /** The crest the card shows faintly behind the game, kept a month. */
+    private static final String CREST_FALLBACK = "https://media-cdn.incrowdsports.com/d2eef4a8-62df-4fdd-9076-276004268515.png";
     /** Zvezda's red, the short bar beside each line. */
     private static final int RED = 0xFFE30613;
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
@@ -50,11 +54,13 @@ public class GamesProvider extends ContentProvider {
             String sport = football ? "football" : "basketball";
             Zvezda.Game game = read(saved, sport, football, now);
             String[] line = Zvezda.line(game, football, now);
-            if (line == null) continue;
+            String[] parts = Zvezda.parts(game, football, now);
+            if (line == null || parts == null) continue;
             long end = game.start + Zvezda.PLAYING_MS;
             if (Integer.parseInt(line[1]) == Zvezda.LIVE && end <= now) end = now + 15 * MINUTE;   // running late
             busy |= game.start - now < 30 * MINUTE;
-            found[k++] = new Object[] {line[0], football ? "⚽" : "🏀", game.start, end, RED, football ? "FotMob" : "EuroLeague", 20};
+            found[k++] = new Object[] {line[0], football ? "⚽" : "🏀", game.start, end, RED, football ? "FotMob" : "EuroLeague", 20,
+                    sport, parts[0], parts[1], parts[2], Integer.parseInt(parts[3])};
         }
         if (k == 2 && (long) found[1][2] < (long) found[0][2]) {   // sorted by start, as the contract asks
             Object[] first = found[0];
@@ -85,6 +91,52 @@ public class GamesProvider extends ContentProvider {
         }
         String body = saved.getString(sport + "_body", "");
         return football ? Zvezda.fromCalendar(body, now) : Zvezda.fromEuroleague(body, now);
+    }
+
+    /**
+     * ".../crest": Zvezda's crest (PNG) for the card, downloaded once from the link in the EuroLeague feed and kept a
+     * month. Called on a binder thread, so the download may block.
+     */
+    @Override
+    public android.os.ParcelFileDescriptor openFile(Uri uri, String mode) throws java.io.FileNotFoundException {
+        if (!"/crest".equals(uri.getPath())) throw new java.io.FileNotFoundException(uri.toString());
+        java.io.File file = new java.io.File(getContext().getFilesDir(), "crest.png");
+        if (!file.isFile() || System.currentTimeMillis() - file.lastModified() > 30L * 24 * HOUR) {
+            String link = Ticker.crestUrl(getContext().getSharedPreferences("zvezda", 0).getString("basketball_body", ""));
+            byte[] png = download(link != null ? link : CREST_FALLBACK);
+            if (png.length > 0) {
+                java.io.File part = new java.io.File(file.getPath() + ".part");
+                try (java.io.FileOutputStream out = new java.io.FileOutputStream(part)) {
+                    out.write(png);
+                } catch (java.io.IOException e) {
+                    part.delete();
+                }
+                if (part.isFile() && !part.renameTo(file)) part.delete();
+            }
+        }
+        if (!file.isFile()) throw new java.io.FileNotFoundException("no crest yet");
+        return android.os.ParcelFileDescriptor.open(file, android.os.ParcelFileDescriptor.MODE_READ_ONLY);
+    }
+
+    /** An image, at most 2 MB; empty on any failure. */
+    private static byte[] download(String address) {
+        java.net.HttpURLConnection http = null;
+        try {
+            http = (java.net.HttpURLConnection) new java.net.URL(address).openConnection();
+            http.setConnectTimeout(6000);
+            http.setReadTimeout(8000);
+            if (http.getResponseCode() != 200) return new byte[0];
+            java.io.ByteArrayOutputStream body = new java.io.ByteArrayOutputStream();
+            try (java.io.InputStream in = http.getInputStream()) {
+                byte[] chunk = new byte[16384];
+                for (int n; body.size() < 2_000_000 && (n = in.read(chunk)) > 0; ) body.write(chunk, 0, n);
+            }
+            return body.toByteArray();
+        } catch (Exception e) {
+            return new byte[0];
+        } finally {
+            if (http != null) http.disconnect();
+        }
     }
 
     @Override

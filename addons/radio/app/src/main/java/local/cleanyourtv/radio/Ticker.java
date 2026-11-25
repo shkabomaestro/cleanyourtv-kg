@@ -57,7 +57,11 @@ final class Ticker {
         }
     }
 
-    /** Zvezda's games in the feed's answer; anything unexpected in it gives none rather than a wrong line. */
+    /**
+     * Zvezda's games in the feed's answer; anything unexpected in it gives none rather than a wrong line. The feed
+     * as it answers in November 2026: data[] of {date, status ("confirmed", "result", ...), home: {code, name,
+     * abbreviatedName, score}, away: {...}}. The older shape (local/road with a club inside) is still read.
+     */
     static List<Game> games(String json) {
         List<Game> out = new ArrayList<>();
         try {
@@ -66,15 +70,19 @@ final class Ticker {
             if (data == null) return out;
             for (int i = 0; i < data.length(); i++) {
                 JSONObject g = data.getJSONObject(i);
-                JSONObject local = g.optJSONObject("local"), road = g.optJSONObject("road");
+                JSONObject local = g.optJSONObject("home"), road = g.optJSONObject("away");
+                if (local == null || road == null) {
+                    local = g.optJSONObject("local");
+                    road = g.optJSONObject("road");
+                }
                 if (local == null || road == null) continue;
                 String home = club(local), away = club(road);
                 boolean zvezdaHome = isZvezda(local), zvezdaAway = isZvezda(road);
                 if (!zvezdaHome && !zvezdaAway) continue;
                 long start = utc(g.optString("date", ""));
                 if (start == 0) continue;
-                out.add(new Game(start, home, away, local.optInt("score", 0), road.optInt("score", 0),
-                        g.optBoolean("played", false), zvezdaHome));
+                boolean played = g.optBoolean("played", false) || "result".equalsIgnoreCase(g.optString("status", ""));
+                out.add(new Game(start, home, away, local.optInt("score", 0), road.optInt("score", 0), played, zvezdaHome));
             }
         } catch (Exception e) {
             out.clear();
@@ -82,15 +90,19 @@ final class Ticker {
         return out;
     }
 
-    private static boolean isZvezda(JSONObject side) {
+    /** The team itself, or the club inside it in the older shape. */
+    private static JSONObject team(JSONObject side) {
         JSONObject c = side.optJSONObject("club");
-        if (c == null) return false;
+        return c != null ? c : side;
+    }
+
+    private static boolean isZvezda(JSONObject side) {
+        JSONObject c = team(side);
         return "RED".equalsIgnoreCase(c.optString("code", "")) || News.fold(c.optString("name", "")).contains("zvezda");
     }
 
     private static String club(JSONObject side) {
-        JSONObject c = side.optJSONObject("club");
-        if (c == null) return "?";
+        JSONObject c = team(side);
         String name = c.optString("abbreviatedName", c.optString("name", "?"));
         return clubName(name);
     }

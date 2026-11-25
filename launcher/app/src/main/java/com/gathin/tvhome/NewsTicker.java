@@ -61,6 +61,8 @@ final class NewsTicker extends View {
     private final String badgeText;
     /** The label's width, and where the running text starts (under the label's right edge). */
     private final float badgeWidth, left;
+    /** The label's distance from the screen's left edge: close to it, clear of a TV's overscan. */
+    private static final float BADGE_START_DP = 20;
 
     private List<Line> lines = Collections.emptyList(), next;
     private float[] titleWidths = new float[0], sourceWidths = new float[0];
@@ -91,7 +93,7 @@ final class NewsTicker extends View {
         badge.setColor(BADGE);
         rule.setColor(0x33FFFFFF);
         badgeWidth = label.measureText(badgeText) + 30 * dp;
-        left = 56 * dp + badgeWidth;   // in line with Home's own left margin
+        left = BADGE_START_DP * dp + badgeWidth;
         setLines(kept);
     }
 
@@ -216,7 +218,7 @@ final class NewsTicker extends View {
         // the label last, over the text that slides under it, with a short fade on its right
         float top = h * 0.2f, bottom = h * 0.8f;
         canvas.drawRect(left, 0, left + 18 * dp, h, fade);
-        box.set(56 * dp, top, 56 * dp + badgeWidth - 12 * dp, bottom);
+        box.set(BADGE_START_DP * dp, top, BADGE_START_DP * dp + badgeWidth - 12 * dp, bottom);
         canvas.drawRoundRect(box, 4 * dp, 4 * dp, badge);
         canvas.drawText(badgeText, box.left + (box.width() - label.measureText(badgeText)) / 2f,
                 h / 2f - (label.descent() + label.ascent()) / 2f, label);

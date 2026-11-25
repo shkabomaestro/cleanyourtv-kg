@@ -41,5 +41,6 @@
   "clock_glow": false,
   "locale": "sr-Cyrl-RS",
   "weather_effects": true,
-  "news_ticker": true
+  "news_ticker": true,
+  "game_day": "local.cleanyourtv.radio"
 }

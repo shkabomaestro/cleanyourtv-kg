@@ -179,6 +179,15 @@ public class RadioService extends Service implements AudioManager.OnAudioFocusCh
      */
     @SuppressWarnings("deprecation")   // getDhcpInfo, disconnect and reconnect: the last two only work below targetSdk 29
     private void checkLink() {
+        // Screen off (the TV off, or the stick asleep): Android cuts apps off the network on purpose then, and a
+        // silent router would read as a dead link and bounce the Wi-Fi all night. Nothing is checked until it wakes.
+        android.os.PowerManager power = getSystemService(android.os.PowerManager.class);
+        if (power != null && !power.isInteractive()) {
+            renews = 0;
+            offline = 0;
+            link.postDelayed(this::checkLink, LINK_CHECK_MS);
+            return;
+        }
         WifiManager wifi = getApplicationContext().getSystemService(WifiManager.class);
         int gateway = wifi.getDhcpInfo().gateway;   // 0 while not connected: Android is already reconnecting
         long wait = LINK_CHECK_MS;

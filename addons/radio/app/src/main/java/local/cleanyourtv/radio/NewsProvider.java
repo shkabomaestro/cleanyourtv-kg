@@ -148,7 +148,7 @@ public class NewsProvider extends ContentProvider {
     private static final Pattern ENCODING = Pattern.compile("encoding=[\"']([A-Za-z0-9_\\-]+)[\"']");
 
     /** The feed as text, in the encoding its XML declaration names (UTF-8 if none); "" when it fails. */
-    private static String get(String address) {
+    static String get(String address) {   // also GamesProvider
         HttpURLConnection http = null;
         try {
             http = (HttpURLConnection) new URL(address).openConnection();

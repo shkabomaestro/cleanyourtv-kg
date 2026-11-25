@@ -50,5 +50,14 @@
             android:exported="true"
             android:readPermission="local.cleanyourtv.radio.PLAY" />
 
+        <!-- Zvezda's next football and basketball games for Home's game panel under the clock, by the launcher's
+             game_day contract (docs/modules.md): the theme names this package in "game_day". Without a permission,
+             as the contract asks; it holds the game lines only. -->
+        <meta-data android:name="com.gathin.tvhome.games" android:value="local.cleanyourtv.radio.games" />
+        <provider
+            android:name=".GamesProvider"
+            android:authorities="local.cleanyourtv.radio.games"
+            android:exported="true" />
+
     </application>
 </manifest>
